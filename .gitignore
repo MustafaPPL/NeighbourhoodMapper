@@ -1,0 +1,12 @@
+.venv/
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+output/
+data/london_libraries.csv
+
+.DS_Store
+Thumbs.db

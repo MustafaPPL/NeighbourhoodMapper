@@ -1,0 +1,334 @@
+Practice code,Practice name,ICB area,Borough,Post Code,Matched Address,Matched Postcode,Latitude,Longitude,TomTom Score,Match Type
+E83005,Lichfield Grove Surgery,NCL,Barnet,N3 2JP,"2 Lichfield Grove, Finchley, London, N3 2JP",,51.5996,-0.19323,13.0667867661,Name + postcode match
+E83007,Squires Lane Medical Practice,NCL,Barnet,N3 2AU,"2 Squires Lane, Finchley, London, N3 2AU",,51.6025,-0.174963,15.1659879684,Name + postcode match
+E83008,Heathfielde Medical Centre,NCL,Barnet,N2 0EQ,"8 Lyttelton Road, East Finchley, London, N2 0EQ",,51.585224,-0.179772,13.0667867661,Name + postcode match
+E83009,PHGH Doctors,NCL,Barnet,NW11 7TE,"23 Temple Fortune Lane, Golders Green, London, NW11 7TE",,51.5811,-0.197831,10.9264259338,Name + postcode match
+E83011,The Everglade Medical Practice,NCL,Barnet,NW9 5XT,"Quakers Course, Colindale, London, NW9 5UA",,51.6016,-0.244195,12.2919082642,Name + postcode match
+E83012,The Old Court House Surgery,NCL,Barnet,EN5 4BB,"27 Wood Street, Barnet, EN5 4BE",,51.6529,-0.201577,14.4342918396,Name + postcode match
+E83013,Cornwall House Surgery,NCL,Barnet,N12 9SS,"16 Torrington Park, North Finchley, London, N12 9SS",,51.617,-0.17545,13.0667867661,Name + postcode match
+E83016,Millway Medical Practice,NCL,Barnet,NW7 2HX,"2 Hartley Avenue, Mill Hill, London, NW7 2HX",,51.615526,-0.243984,13.0667867661,Name + postcode match
+E83018,Watling Medical Centre,NCL,Barnet,HA8 0NR,"108 Watling Avenue, Edgware, HA8 0NR",,51.6033,-0.262007,13.0667867661,Name + postcode match
+E83024,St Andrews Medical Practice,NCL,Barnet,N20 9EX,"50 Oakleigh Road North, Whetstone, London, N20 9EX",,51.6301,-0.172365,15.1659879684,Name + postcode match
+E83028,Parkview Surgery,NCL,Barnet,HA8 0RW,"36 Cressingham Road, Edgware, HA8 0RW",,51.60723,-0.257636,10.9264259338,Name + postcode match
+E83028001,Parkview Surgery: Grahame Park Surgery,NCL,Barnet,,"24 Leicester Road, Loughborough, LE11 2AG",,52.76961,-1.202659,9.3099079132,Name + postcode match
+E83031,The Village Surgery,NCL,Barnet,EN4 8RF,"113 East Barnet Road, Barnet, EN4 8RF",,51.6482,-0.16829,13.0667867661,Name + postcode match
+E83032,Oak Lodge Medical Centre,NCL,Barnet,HA8 0AP,"234 Burnt Oak Broadway, Edgware, HA8 0AP",,51.6044,-0.2717,15.1659879684,Name + postcode match
+E83034,Colney Hatch Lane Surgery,NCL,Barnet,N10 1ET,"192 Colney Hatch Lane, Muswell Hill, London, N10 1ET",,51.60133,-0.14753,15.1659879684,Name + postcode match
+E83035,Wentworth Medical Practice,NCL,Barnet,N3 1YL,"38 Wentworth Avenue, Finchley, London, N3 1YL",,51.6077,-0.187909,13.0667867661,Name + postcode match
+E83035001,Wentworth Medical Practice: Audley Medical Practice,NCL,Barnet,,"38 Wentworth Avenue, Finchley, London, N3 1YL",,51.6077,-0.187909,12.5350446701,Name + postcode match
+E83037,Derwent Crescent Medical Centre,NCL,Barnet,N20 0QQ,"Derwent Crescent, North Finchley, London, N20 0QQ",,51.622311,-0.17511,11.3151130676,Name + postcode match
+E83044,Addington Medical Centre,NCL,Barnet,EN5 1QH,"1 Station Road, New Barnet, Barnet, EN5 1QH",,51.649689,-0.176864,13.0667867661,Name + postcode match
+E83045,Friern Barnet Medical Centre,NCL,Barnet,N11 3BU,"16 Friern Barnet Road, Friern Barnet, London, N11 3BU",,51.613237,-0.156458,15.1659879684,Name + postcode match
+E83050,East Finchley Medical Centre,NCL,Barnet,N2 9QD,"39 Baronsmere Road, East Finchley, London, N2 9QD",,51.5881,-0.162119,13.0038108826,Name + postcode match
+E83668,Deans Lane Medical Centre,NCL,Barnet,HA8 9NT,"156 Dean's Lane, Edgware, HA8 9NT",,51.616175,-0.260349,14.4109344482,Name + postcode match
+Y00316,Woodlands Medical Practice,NCL,Barnet,N2 8BG,"54 Leopold Road, East Finchley, London, N2 8BG",,51.5933,-0.1706,13.0038108826,Name + postcode match
+Y03663,Hendon Way Surgery,NCL,Barnet,NW9 7DG,"215 West Hendon Broadway, Kingsbury, London, NW9 7DG",,51.578741,-0.241119,13.0667867661,Name + postcode match
+E87066,Fitzrovia Medical Centre,NCL,Camden,W1T 6EU,"31 Fitzroy Square, West End, London, W1T 6JF",,51.522469,-0.140447,10.1927070618,Name + postcode match
+F7B0O,Babylon GP at Hand: Drummond Street Surgery,NCL,Camden,,"184 Drummond Street, Regents Park, London, NW1 3HP",,51.5263,-0.140615,12.327123642,Name + postcode match
+F83003,Park End Surgery,NCL,Camden,NW3 2SE,"3 Park End, Belsize Park, London, NW3 2SE",,51.555991,-0.165626,13.0667867661,Name + postcode match
+F83005,Gower Street Practice,NCL,Camden,WC1E 6DP,"20 Gower Street, Bloomsbury, London, WC1E 6DP",,51.520356,-0.130128,13.0667867661,Name + postcode match
+F83011,Primrose Hill Surgery,NCL,Camden,NW1 8UR,"99 Regent's Park Road, Camden Town, London, NW1 8UR",,51.5421,-0.156352,13.0667867661,Name + postcode match
+F83017,Hampstead Group Practice,NCL,Camden,NW3 2QU,"75 Fleet Road, Belsize Park, London, NW3 2QU",,51.55354,-0.16308,13.0667867661,Name + postcode match
+F83018,Prince of Wales Group Surgery,NCL,Camden,NW5 3LN,"52 Prince of Wales Road, Kentish Town, London, NW5 3LN",,51.546535,-0.14698,15.0836200714,Name + postcode match
+F83019,Abbey Medical Centre,NCL,Camden,NW8 0AG,"14 Abbey Road, Saint Johns Wood, London, NW8 0AG",,51.5379,-0.185117,13.0667867661,Name + postcode match
+F83020,Adelaide Medical Centre,NCL,Camden,NW3 3RY,"111 Adelaide Road, Swiss Cottage, London, NW3 3RY",,51.5436,-0.1614,13.0667867661,Name + postcode match
+F83025,The Regents Park Practice,NCL,Camden,NW1 3RH,"3 Cumberland Market, Regents Park, London, NW1 3RH",,51.52933,-0.1418,12.9420347214,Name + postcode match
+F83042,Gray's Inn Road Medical Centre,NCL,Camden,WC1X 8TS,"77 Gray's Inn Road, Grays Inn, London, WC1X 8TS",,51.5228,-0.1145,14.5537843704,Name + postcode match
+F83043,Ridgmount Practice,NCL,Camden,WC1E 7AA,"7 Ridgmount Place, Bloomsbury, London, WC1E 7AA",,51.520429,-0.131116,10.9264259338,Name + postcode match
+F83050,Fortune Green Road Surgery,NCL,Camden,NW6 1DS,"Fortune Green Road, South & West Hampstead, London, NW6 1DS",,51.555241,-0.196693,13.5316133499,Name + postcode match
+F83052,Brookfield Park Surgery,NCL,Camden,N19 5BZ,"68 Chester Road, Tufnell Park, London, N19 5BZ",,51.563932,-0.143139,13.0667867661,Name + postcode match
+F83057,Parliament Hill Surgery,NCL,Camden,NW5 1TR,"117 Highgate Road, Kentish Town, London, NW5 1TR",,51.55532,-0.14556,12.9156446457,Name + postcode match
+F83058,Holborn Medical Centre,NCL,Camden,WC1N 3NA,"64 Lamb's Conduit Street, Bloomsbury, London, WC1N 3NA",,51.522203,-0.118514,13.0667867661,Name + postcode match
+F83061,Museum Practice,NCL,Camden,WC1B 3BA,"58 Great Russell Street, Bloomsbury, London, WC1B 3BA",,51.51828,-0.12536,10.9264259338,Name + postcode match
+F83615,Cholmley Gardens Surgery,NCL,Camden,NW6 1AE,"1 Cholmley Gardens, South & West Hampstead, London, NW6 1AE",,51.552171,-0.195195,12.8814239502,Name + postcode match
+F83623,Keats Group Practice,NCL,Camden,NW3 1NR,"28A Rosslyn Hill, Hampstead, London, NW3 1NH",,51.55488,-0.171719,10.1927070618,Name + postcode match
+F83632,Queens Crescent Practice,NCL,Camden,NW5 4EB,"76 Queen's Crescent, Kentish Town, London, NW5 4EB",,51.5497,-0.151765,13.0667867661,Name + postcode match
+F83633,Daleham Gardens Surgery,NCL,Camden,NW3 5BY,"5 Daleham Gardens, Swiss Cottage, London, NW3 5BY",,51.54723,-0.17438,13.0667867661,Name + postcode match
+F83635,Kings Cross Surgery,NCL,Camden,NW1 1HY,"83 Chalton Street, Regents Park, London, NW1 1HY",,51.5299,-0.130592,13.0667867661,Name + postcode match
+F83658,Belsize Priory Medical Practice (Group),NCL,Camden,NW6 4BJ,"158 Belsize Road, South & West Hampstead, London, NW6 4BJ",,51.5405,-0.185244,17.2252044678,Name + postcode match
+F83665,Swiss Cottage Surgery,NCL,Camden,NW3 3NP,"Winchester Road, Swiss Cottage, London, NW3 3NP",,51.542992,-0.172025,10.438079834,Name + postcode match
+Y02674,Camden Health Improvement Practice,NCL,Camden,NW1 2LS,"106 Hampstead Road, Regents Park, London, NW1 2LS",,51.5282,-0.138346,15.1659879684,Name + postcode match
+B8T9I,East Enfield Practice: Brick Lane,NCL,Enfield,,"28 Brick Lane, Enfield, EN3 5BA",,51.6573,-0.048597,12.2261066437,Name + postcode match
+D6Q8D,MHP: Southbury Surgery,NCL,Enfield,,"73 Southbury Road, Enfield, EN1 1PJ",,51.652,-0.0742,6.028345108,Name + postcode match
+D9T4W,MHP: Bush Hill Park Medical Centre,NCL,Enfield,,"264 East Park Road, Leicester, LE5 5FD",,52.6336,-1.10437,9.6025438309,Name + postcode match
+F85634,East Enfield Medical Centre,NCL,Enfield,EN3 4EZ,"188 Hertford Road, High Street, Enfield, EN3 4",,51.6462,-0.047096,12.2919082642,Name + postcode match
+I1Z8L,MHP: Carlton House Surgery,NCL,Enfield,,"76 Carlton Road, Worksop, S80 1PH",,53.310016,-1.121541,6.9266324043,Name + postcode match
+O0H1S,MHP: Hertford Road Surgery,NCL,Enfield,,"308 Hertford Road, Lower Edmonton, London, N9 7HD",,51.6325,-0.054155,7.7491960526,Name + postcode match
+X6I6K,MHP: Trinity Avenue Surgery,NCL,Enfield,,"13 Saint Augustines Road, Wisbech, PE13 3AG",,52.665701,0.163931,7.5314621925,Name + postcode match
+Z3D3X,MHP: Willow House Surgery,NCL,Enfield,,"10 Hill House Road, Bristol, BS16 5RR",,51.48523,-2.49707,7.2308392525,Name + postcode match
+F85007,Lawrence House Surgery,NCL,Haringey,N15 4JR,"107 Philip Lane, Seven Sisters, London, N15 4JR",,51.5887,-0.0785,13.0667867661,Name + postcode match
+F85008,Staunton Group Practice,NCL,Haringey,N22 8HE,"3 Bounds Green Road, Wood Green, London, N22 8HE",,51.59886,-0.11209,13.0667867661,Name + postcode match
+F85013,Tynemouth Medical Practice,NCL,Haringey,N15 4RH,"4 Tynemouth Road, Seven Sisters, London, N15 4AL",,51.5863,-0.068317,10.5165462494,Name + postcode match
+F85017,Charlton House Medical Centre,NCL,Haringey,N17 6SB,"581A High Road, Tottenham, London, N17 6SB",,51.5953,-0.069246,15.1659879684,Name + postcode match
+F85028,Bruce Grove Primary Health Care Centre,NCL,Haringey,N17 6QB,"461 High Road, Tottenham, London, N17 6QB",,51.59209,-0.07006,19.2455692291,Name + postcode match
+F85028001,Bruce Grove Primary Health Care Centre: Castleview Surgery,NCL,Haringey,,"461 High Road, Tottenham, London, N17 6QB",,51.59209,-0.07006,14.3474884033,Name + postcode match
+F85030,Somerset Gardens Family Health Centre,NCL,Haringey,N17 8NW,"4 Creighton Road, Tottenham, London, N17 8SH",,51.6053,-0.073457,14.3511238098,Name + postcode match
+F85031,Westbury Medical Centre,NCL,Haringey,N22 6RX,"205 Westbury Avenue, Wood Green, London, N22 6RX",,51.59802,-0.09343,13.0667867661,Name + postcode match
+F85034,Arcadian Gardens Surgery,NCL,Haringey,N22 5AB,"1 Arcadian Gardens, Wood Green, London, N22 5AB",,51.6067,-0.110759,13.0667867661,Name + postcode match
+F85046,Hornsey Park Surgery,NCL,Haringey,N8 0PH,"114A Turnpike Lane, Hornsey, London, N8 0PH",,51.5893,-0.109217,13.0667867661,Name + postcode match
+F85060,Havergal Surgery,NCL,Haringey,N15 3DY,"Green Lanes, Seven Sisters, London, N15 3DY",,51.5892,-0.102002,10.9264259338,Name + postcode match
+F85061,Christchurch Hall Surgery,NCL,Haringey,N8 8AE,"20 Edison Road, Crouch End, London, N8 8AE",,51.57759,-0.12498,12.8072490692,Name + postcode match
+F85063,The Muswell Hill Practice,NCL,Haringey,N10 3ST,"3 Muswell Hill, Muswell Hill, London, N10 3ST",,51.591,-0.141107,15.1659879684,Name + postcode match
+F85064,Stuart Crescent Health Centre,NCL,Haringey,N22 5NJ,"8 Stuart Crescent, Wood Green, London, N22 5NJ",,51.60017,-0.110402,15.1659879684,Name + postcode match
+F85065,Stuart Crescent Medical Practice,NCL,Haringey,N22 5NJ,"Stuart Crescent, Wood Green, London, N22 5NJ",,51.599877,-0.110565,11.3151130676,Name + postcode match
+F85066,Bounds Green Group Practice,NCL,Haringey,N11 2PF,"2 Gordon Road, New Southgate, London, N11 2NY",,51.6066,-0.126478,12.6157474518,Name + postcode match
+F85067,The 157 Medical Practice,NCL,Haringey,N4 3PZ,"157 Stroud Green Road, Finsbury Park, London, N4 3PZ",,51.5701,-0.114314,15.1659879684,Name + postcode match
+F85069,Crouch Hall Road Surgery,NCL,Haringey,N8 8HJ,"48 Crouch Hall Road, Crouch End, London, N8 8HJ",,51.57943,-0.126265,15.1659879684,Name + postcode match
+F85071,Fernlea Surgery,NCL,Haringey,N15 6JR,"114 High Road, South Tottenham, London, N15 6JR",,51.5785,-0.072772,10.9264259338,Name + postcode match
+F85615,Tottenham Health Centre,NCL,Haringey,N17 8AH,"759 High Road, Tottenham, London, N17 8AH",,51.604593,-0.068297,13.0667867661,Name + postcode match
+F85623,Grove Road Surgery,NCL,Haringey,N15 5HJ,"15 Grove Road, Seven Sisters, London, N15 5HJ",,51.5812,-0.081679,13.0667867661,Name + postcode match
+F85628,Dowsett Road Surgery,NCL,Haringey,N17 9QX,"57 Dowsett Road, Tottenham, London, N17 9DL",,51.59489,-0.06573,10.1927070618,Name + postcode match
+F85640,Cheshire Road Surgery,NCL,Haringey,N22 8JJ,"22 Cheshire Road, Wood Green, London, N22 8JJ",,51.6072,-0.113686,13.0667867661,Name + postcode match
+F85669,West Green Surgery,NCL,Haringey,N8 0RA,"590 Green Lanes, Hornsey, London, N8 0RA",,51.5843,-0.099781,13.0667867661,Name + postcode match
+F85675,The Alexandra Surgery,NCL,Haringey,N22 7UN,"Alexandra Park Road, Alexandra Palace, London, N22 7UN",,51.598431,-0.12929,8.8245706558,Name + postcode match
+F85688,Rutland House Surgery,NCL,Haringey,N10 1DU,"40 Colney Hatch Lane, Muswell Hill, London, N10 1DU",,51.595221,-0.144626,13.0667867661,Name + postcode match
+F85697,The Old Surgery,NCL,Haringey,N8 0RP,"572 Green Lanes, Hornsey, London, N8 0RP",,51.58332,-0.09963,13.0667867661,Name + postcode match
+F85705,JS Medical Practice,NCL,Haringey,N15 4JR,"107 Philip Lane, Seven Sisters, London, N15 4JR",,51.5891,-0.078699,13.0667867661,Name + postcode match
+F85705001,JS Medical Practice: Park Lane,NCL,Haringey,,"108 Park Lane, Tottenham, London, N17 0JP",,51.6023,-0.060199,11.696023941,Name + postcode match
+F85705002,JS Medical Practice: Westbury Avenue Surgery,NCL,Haringey,,"26 Westbury Avenue, Wood Green, London, N22 6RS",,51.5936,-0.097719,12.2261066437,Name + postcode match
+M4V7Y,Rutland House Surgery: Queens Avenue Practice,NCL,Haringey,,"6 George Street, Teignmouth, TQ14 8AH",,50.546013,-3.496969,9.8722400665,Name + postcode match
+Y01655,The Vale Practice,NCL,Haringey,N8 8SU,"8 Lakin Drive, Barry, CF62 8GP",,51.416,-3.291,6.2362780571,Name + postcode match
+Y03135,Bridge House Medical Practice,NCL,Haringey,N4 1TL,"96 Umfreville Road, Manor House, London, N4 1SA",,51.577326,-0.099145,12.2919082642,Name + postcode match
+Y05330,Tottenham Hale Medical Practice,NCL,Haringey,N17 9QX,"Monument Way, Tottenham, London, N17 9QX",,51.589455,-0.065154,10.438079834,Name + postcode match
+F83021,Ritchie Street Group Practice,NCL,Islington,N1 0DG,"Ritchie Street, Barnsbury, London, N1 0DG",,51.534769,-0.108189,11.3151130676,Name + postcode match
+F83045,The Miller Practice,NCL,Islington,N5 2ET,"49A Highbury New Park, Highbury, London, N5 2ET",,51.5514,-0.092151,13.0667867661,Name + postcode match
+F83060,The Northern Medical Centre,NCL,Islington,N7 8GG,"15A Hornsey Street, Lower Holloway, London, N7 8HE",,51.5511,-0.115531,12.2919082642,Name + postcode match
+F83064,City Road Medical Centre,NCL,Islington,EC1V 2QH,"197 City Road, London, EC1V 2QH",,51.5279,-0.091101,15.1659879684,Name + postcode match
+F83652,Amwell Group Practice,NCL,Islington,WC1X 0GB,"6 Naoroji Street, Grays Inn, London, WC1X 0GD",,51.528181,-0.110409,10.1927070618,Name + postcode match
+F83666,Andover Medical Centre,NCL,Islington,N7 7EP,"282 Hornsey Road, Holloway, London, N7 7QZ",,51.5618,-0.116446,10.1927070618,Name + postcode match
+Y03103,Medicus Select Care,NCL,Islington,N1 0AL,"28 Tenniswood Road, Enfield, EN1 3LL",,51.6625,-0.076758,8.0439548492,Name + postcode match
+F82001,Halbutt Street Surgery,NEL,Barking & Dagenham,RM9 5AS,"2 Halbutt Street, Dagenham, RM9 5AS",,51.547,0.146756,13.0667867661,Name + postcode match
+F82005,Church Elm Lane Medical Centre,NEL,Barking & Dagenham,RM10 9RR,"Church Elm Lane, Dagenham, RM10 9RR",,51.540123,0.154803,13.5316133499,Name + postcode match
+F82009001,North Street Medical Care: Chadwell Heath Health Centre,NEL,Barking & Dagenham,,"5 Sir George's Street, Thurso, KW14 7",,58.592972,-3.520102,12.4688873291,Name + postcode match
+F82012,Five Elms Medical Practice,NEL,Barking & Dagenham,RM9 5TT,"5 Five Elms Road, Dagenham, RM9 5TT",,51.553663,0.142778,15.0028057098,Name + postcode match
+F82015,Hedgemans Surgery,NEL,Barking & Dagenham,RM9 6HT,"Hedgemans Road, Dagenham, RM9 6HT",,51.53986,0.142662,8.84512043,Name + postcode match
+F82019,Chadwell Heath Health Centre (Dr Hamilton-Smith),NEL,Barking & Dagenham,RM6 6RT,"19 Cross Road, Chadwell Heath, Romford, RM6 4JP",,51.5678,0.1231,10.4293289185,Name + postcode match
+F82621,Dewey Practice (Dr Christopher),NEL,Barking & Dagenham,RM10 7YU,"199 Reede Road, Dagenham, RM10 8EJ",,51.545105,0.160077,7.5744304657,Name + postcode match
+F82660,Tulasi Medical Centre,NEL,Barking & Dagenham,RM8 3XU,"10 Bennett's Castle Lane, Dagenham, RM8 3XU",,51.561,0.124504,13.0667867661,Name + postcode match
+F82661,Green Lane Surgery,NEL,Barking & Dagenham,RM8 1BX,"872 Green Lane, Dagenham, RM8 1BX",,51.5616,0.130886,13.0667867661,Name + postcode match
+F82677,Dr A Moghal's Practice,NEL,Barking & Dagenham,RM8 3HP,"620 Longbridge Road, Dagenham, RM8 2AJ",,51.5514,0.115358,8.0095376968,Name + postcode match
+F82686,Ashton Gardens Surgery,NEL,Barking & Dagenham,RM6 6RT,"6 Ashton Gardens, Romford, RM6 6RT",,51.5737,0.14012,13.0667867661,Name + postcode match
+F86040,The Surgery (Dr A Arif),NEL,Barking & Dagenham,RM8 2AJ,"620 Longbridge Road, Dagenham, RM8 2AJ",,51.5514,0.115358,13.0667867661,Name + postcode match
+Y01795,The Oval Practice,NEL,Barking & Dagenham,RM10 7YU,"281 Oxlow Lane, Dagenham, RM10 7YU",,51.551469,0.158881,8.5214366913,Name + postcode match
+Y02575001,Porters Avenue Surgery: Child and Family Health Centre,NEL,Barking & Dagenham,,"79 Axe Street, Barking, IG11 7LZ",,51.53563,0.07925,11.7131032944,Name + postcode match
+F84038,Beechwood Medical Centre,NEL,City & Hackney,E8 3AH,"86 Dalston Lane, Hackney, London, E8 3AH",,51.5461,-0.070581,13.0667867661,Name + postcode match
+F84117,Queensbridge Group Practice,NEL,City & Hackney,E8 3XP,"24 Holly Street, Hackney, London, E8 3XP",,51.5415,-0.071469,13.0667867661,Name + postcode match
+F84620001,The Wick Health Centre: Median Road Surgery,NEL,City & Hackney,,"200 Wick Road, Homerton, London, E9 5TD",,51.547423,-0.037386,9.8722400665,Name + postcode match
+F84636,Barretts Grove Surgery,NEL,City & Hackney,N16 8AR,"6 Barrett's Grove, Stoke Newington, London, N16 8AR",,51.552198,-0.07827,12.8263320923,Name + postcode match
+F82006,Cranham Village Surgery,NEL,Havering,RM14 1BJ,"143 Ingrebourne Gardens, Upminster, RM14 1BJ",,51.56269,0.26573,13.0667867661,Name + postcode match
+F82014,Harold Hill Health Centre,NEL,Havering,RM3 9SU,"173 Gooshays Drive, Romford, RM3 9SU",,51.6063,0.2253,15.0028057098,Name + postcode match
+F82016,Central Park Surgery,NEL,Havering,RM3 9SU,"173 Gooshays Drive, Romford, RM3 9SU",,51.6063,0.2253,8.4641752243,Name + postcode match
+F82607,South Hornchurch Medical Practice,NEL,Havering,RM13 7XJ,"74 South End Road, Rainham, RM13 7XJ",,51.5312,0.191157,15.1659879684,Name + postcode match
+F82670,Abbamoor Surgery,NEL,Havering,RM3 9SU,"Gooshays Drive, Romford, RM3 9SU",,51.603293,0.228285,6.81661129,Name + postcode match
+F82674,Avon Road Surgery,NEL,Havering,RM14 1RG,"1AA Avon Road, Upminster, RM14 1RG",,51.56892,0.265951,13.0667867661,Name + postcode match
+Y00312,The Robins Surgery,NEL,Havering,RM3 9SU,"Gooshays Drive, Romford, RM3 9SU",,51.603293,0.228285,6.81661129,Name + postcode match
+F84010,St. Bartholomew's Surgery,NEL,Newham,E6 1FL,"1 Saint Bartholomew's Road, East Ham, London, E6 3AG",,51.531968,0.053146,8.5310077667,Name + postcode match
+F84093,Tollgate Medical Centre,NEL,Newham,E6 5JS,"220 Tollgate Road, Beckton, London, E6 5JS",,51.5156,0.056376,13.0667867661,Name + postcode match
+F84677,East End Medical Centre,NEL,Newham,E13 0QA,"61 Plashet Road, Plaistow, London, E13 0QA",,51.53733,0.02569,15.2927627563,Name + postcode match
+F84740,Newham Transitional Practice,NEL,Newham,E12 6AQ,"30 Church Road, Manor Park, London, E12 6AQ",,51.5478,0.053847,13.0667867661,Name + postcode match
+F84749,AT Medics: Carpenters Practice,NEL,Newham,E15 2JA,"252 High Street, Stratford, London, E15 2JA",,51.53733,-0.0034,10.8416337967,Name + postcode match
+F84749002,AT Medics: St. Luke's Practice,NEL,Newham,,"Saint Luke's Square, Canning Town, London, E16 1HT",,51.5119,0.01361,9.8553733826,Name + postcode match
+W7J9Z,Cumberland Medical Centre,NEL,Newham,,"179 Cumberland Road, Plaistow, London, E13 8LS",,51.518571,0.025656,8.1687068939,Name + postcode match
+F81062,Chigwell Medical Centre,NEL,Redbridge,IG6 2TA,"300 Fencepiece Road, Ilford, IG6 2TA",,51.6055,0.083891,13.0667867661,Name + postcode match
+P9T5K,Ilford Medical Centre Branch,NEL,Redbridge,,"61 Cleveland Road, Ilford, IG1 1EE",,51.55654,0.07441,8.1687068939,Name + postcode match
+Y7H9K,Mathukia's Surgery Branch,NEL,Redbridge,,"281 Ilford Lane, Ilford, IG1 2SF",,51.5498,0.07537,6.028345108,Name + postcode match
+E3M7U,GP at Hand - Cabot Place,NEL,Tower Hamlets,,"14 South Colonnade, Isle of Dogs, London, E14 4PA",,51.5051,-0.020943,12.327123642,Name + postcode match
+F84039,Goodman's Fields Health Centre,NEL,Tower Hamlets,E1 8ZF,"Piazza Walk, Whitechapel, London, E1 8ZH",,51.513375,-0.068868,12.2095394135,Name + postcode match
+F84123,Suttons Wharf Health Centre,NEL,Tower Hamlets,E2 0FA,"26 Palmers Road, Bethnal Green, London, E2 0FQ",,51.5292,-0.041827,12.2919082642,Name + postcode match
+F84647,Roserton Street Surgery,NEL,Tower Hamlets,E14 3PG,"Roserton Street, Isle of Dogs, London, E14 3PG",,51.498493,-0.010051,13.0667867661,Name + postcode match
+F84656,Docklands Medical Centre,NEL,Tower Hamlets,E14 9WU,"Spindrift Avenue, London, E14 9WU",,51.4912,-0.021129,13.0667867661,Name + postcode match
+F84696,Tredegar Practice,NEL,Tower Hamlets,E3 5JD,"35 Saint Stephen's Road, Bow, London, E3 5JD",,51.53131,-0.03183,10.8836174011,Name + postcode match
+F84710,Island Health,NEL,Tower Hamlets,E14 3BQ,"East Ferry Road, Isle of Dogs, London, E14 3BQ",,51.497104,-0.012954,6.7491197586,Name + postcode match
+T5S9Y,City Square Medical Group: Cable Street,NEL,Tower Hamlets,,"445 Cable Street, Whitechapel, London, E1W 3DP",,51.51141,-0.04898,13.7952232361,Name + postcode match
+F86086,Wood Street Health Centre,NEL,Waltham Forest,E17 3LA,"6 Linford Road, Walthamstow, London, E17 3LA",,51.587882,-0.003295,15.1659879684,Name + postcode match
+F86689,The Bailey Practice,NEL,Waltham Forest,E17 9LY,"9 Ravenswood Road, Walthamstow, London, E17 9LY",,51.5832,-0.009036,13.0667867661,Name + postcode match
+E84002,Forty Willows Surgery,NWL,Brent,HA9 9HA,"46 Forty Lane, Brent, Wembley, HA9 9HA",,51.565534,-0.271695,13.0667867661,Name + postcode match
+E84007,Uxendon Crescent Surgery,NWL,Brent,HA9 9TW,"1 Uxendon Crescent, Brent, Harrow, HA9 9TW",,51.572598,-0.293845,13.0667867661,Name + postcode match
+E84013,Church End Medical Centre,NWL,Brent,NW10 9HP,"66 Mayo Road, Harlesden, London, NW10 9HP",,51.54797,-0.25339,15.1659879684,Name + postcode match
+E84017001,Sudbury & Alperton Medical Centre: Watford Road Surgery,NWL,Brent,,"267 Ealing Road, Brent, Wembley, HA0 1EU",,51.5369,-0.298032,11.9549016953,Name + postcode match
+E84020,Jai Medical Centre,NWL,Brent,HA8 5LP,"82 Stag Lane, Brent, Edgware, HA8 5LP",,51.5982,-0.270706,13.0038108826,Name + postcode match
+E84020001,Jai Medical Centre: The Sheldon Practice,NWL,Brent,,"169 Church Road, Sheldon, Birmingham, B26 3TT",,52.4605,-1.77766,10.2679080963,Name + postcode match
+E84025001,Lonsdale Medical Group: Blessing Medical Centre,NWL,Brent,,"307 Kilburn Lane, Maida Hill, London, W9 3EG",,51.533083,-0.205141,10.1728639603,Name + postcode match
+E84042,Kilburn Park Medical Centre,NWL,Brent,NW6 5HB,"62 Neville Close, Kilburn, London, NW6 5",,51.5326,-0.199357,12.2919082642,Name + postcode match
+E84080,Staverton Surgery,NWL,Brent,NW2 5HA,"51 Staverton Road, Dollis Hill, London, NW2 5HA",,51.5444,-0.22596,10.9264259338,Name + postcode match
+E84656,Roundwood Park Medical Centre,NWL,Brent,NW10 3RY,"3 Robson Avenue, Willesden, London, NW10 3RY",,51.5428,-0.235512,15.1659879684,Name + postcode match
+E84704,St. Georges Medical Centre,NWL,Brent,NW2 6JH,"31 Dollis Hill Lane, Dollis Hill, London, NW2 6JH",,51.5587,-0.246106,15.1659879684,Name + postcode match
+E84709,Wembley Park Drive Medical Centre,NWL,Brent,HA9 0GL,"Humphry Repton Lane, Brent, Wembley, HA9 0GL",,51.560304,-0.282183,15.1659879684,Name + postcode match
+F83059,Brondesbury Medical Centre,NWL,Brent,NW6 7JQ,"279 Kilburn High Road, Brondesbury Park, London, NW6 7JR",,51.543498,-0.200152,10.1927070618,Name + postcode match
+Y00206,Burnley Practice,NWL,Brent,NW10 3RY,"3 Robson Avenue, Willesden, London, NW10 3RY",,51.5428,-0.235512,10.9264259338,Name + postcode match
+E87002,Victoria Medical Centre,NWL,Central London,SW1V 1SN,"29 Upper Tachbrook Street, Victoria, London, SW1V 1SN",,51.49274,-0.13887,13.0667867661,Name + postcode match
+E87002001,Victoria Medical Centre: Lees Place Medical Centre,NWL,Central London,,"11 Lees Place, Mayfair, London, W1K 6LJ",,51.512092,-0.154424,14.5922613144,Name + postcode match
+E87006,Little Venice Medical Centre,NWL,Central London,W2 1ND,"1 Crompton Street, Paddington, London, W2 1ND",,51.52389,-0.176447,15.1659879684,Name + postcode match
+E87021,Shirland Road Medical Centre,NWL,Central London,W10 4LD,"Dart Street, North Kensington, London, W10 4LD",,51.5306,-0.207627,10.5255937576,Name + postcode match
+E87046,The Randolph Surgery,NWL,Central London,W9 1NH,"235 Elgin Avenue, Maida Vale, London, W9 1NH",,51.53,-0.1864,13.0667867661,Name + postcode match
+E87052,Crompton Medical Centre,NWL,Central London,W2 1ND,"1 Crompton Street, Paddington, London, W2 1ND",,51.52389,-0.176447,12.4608335495,Name + postcode match
+E87681,Newton Medical Centre,NWL,Central London,W2 5LT,"5 Newton Road, Bayswater, London, W2 5SD",,51.516314,-0.190718,10.5165462494,Name + postcode match
+E87691,Palace Gate Practice,NWL,Central London,SW1P 3PB,"2A Pennant Mews, Kensington, London, W8 5JN",,51.495529,-0.190301,8.1057310104,Name + postcode match
+E87745,Cavendish Health Centre,NWL,Central London,NW1 5JD,"53 New Cavendish Street, West End, London, W1G 9TQ",,51.51932,-0.14811,8.1687068939,Name + postcode match
+E87754,Wellington Health Centre,NWL,Central London,NW8 9SP,"8 Wellington Road, Saint Johns Wood, London, NW8 9SP",,51.5323,-0.17127,13.0667867661,Name + postcode match
+E87755,Queens Park Health Centre,NWL,Central London,W10 4LD,"11 Dart Street, North Kensington, London, W10 4UL",,51.530549,-0.206471,12.0494213104,Name + postcode match
+F83672,St Philips Medical Centre,NWL,Central London,WC2A 2AZ,"3 Clements Inn, Holborn, London, WC2A 2AZ",,51.51371,-0.115101,15.1659879684,Name + postcode match
+H1H1A,Babylon GP at Hand: Heron House Surgery,NWL,Central London,,"10 Dean Farrar Street, Westminster, London, SW1H 0DX",,51.4993,-0.131847,12.327123642,Name + postcode match
+E84059,The Allendale Road Surgery,NWL,Ealing,UB6 0RA,"35 Allendale Road, Brent, Greenford, UB6 0RA",,51.551,-0.3207,12.7393112183,Name + postcode match
+E85006,Waterside Medical Centre,NWL,Ealing,UB2 4XQ,"4 Tyler Road, Southall, UB2 4XQ",,51.5022,-0.3637,13.0667867661,Name + postcode match
+E85049,Belmont Medical Centre,NWL,Ealing,UB2 5DU,"18 Western Road, Southall, UB2 5DU",,51.5009,-0.385189,13.0667867661,Name + postcode match
+E85075,Chiswick Family Practice,NWL,Ealing,W3 8TF,"Osborne Road, Acton, London, W3 8SJ",,51.501703,-0.272741,10.1927070618,Name + postcode match
+E85088,Elmbank Surgery,NWL,Ealing,W7 3DD,"438 Greenford Avenue, Hanwell, London, W7 3DD",,51.52532,-0.3418,10.9264259338,Name + postcode match
+E85091,Brunswick Surgery,NWL,Ealing,W5 1AQ,"75 Brunswick Road, Ealing, London, W5 1AQ",,51.52947,-0.30281,10.9264259338,Name + postcode match
+E85098,Islip Manor Medical Centre,NWL,Ealing,UB5 5RG,"45 Eastcote Lane, Northolt, UB5 5RG",,51.5473,-0.373001,15.1659879684,Name + postcode match
+E85107,The Mill Hill Surgery,NWL,Ealing,W3 8QH,"111 Avenue Road, Acton, London, W3 8QH",,51.5052,-0.274431,15.1659879684,Name + postcode match
+E85120001,The Argyle Surgery: Cuckoo Lane Surgery,NWL,Ealing,,"128 Argyle Road, West Ealing, London, W13 8ER",,51.51975,-0.32251,10.1728639603,Name + postcode match
+E85121,The Guru Nanak Medical Centre,NWL,Ealing,UB1 1EQ,"3 Woodlands Road, Southall, UB1 1EQ",,51.5123,-0.387,15.1659879684,Name + postcode match
+E85130,Chiswick Family Practice,NWL,Ealing,W3 8TF,"Osborne Road, Acton, London, W3 8SJ",,51.501703,-0.272741,10.1927070618,Name + postcode match
+E85623,Somerset Medical Centre,NWL,Ealing,UB5 6WL,"5 Taywood Road, Northolt, UB5 6WL",,51.5315,-0.376246,13.0667867661,Name + postcode match
+E85624001,Parkview Health Centre: West End Road Surgery,NWL,Ealing,,"67 Deedmore Road, Coventry, CV2 1XA",,52.4356,-1.46418,11.2539043427,Name + postcode match
+E85640,The Churchfield Road Surgery,NWL,Ealing,W3 6DL,"Churchfield Road, Acton, London, W3 6DL",,51.508471,-0.2676,11.4282646179,Name + postcode match
+E85680,Cloister Road Surgery,NWL,Ealing,W3 0DF,"41 Cloister Road, Acton, London, W3 0DF",,51.5214,-0.265575,13.0667867661,Name + postcode match
+E85682,Dormers Wells Medical Centre,NWL,Ealing,UB1 2LU,"143 Burns Avenue, Southall, UB1 2LU",,51.515419,-0.364263,15.1659879684,Name + postcode match
+E85712,Goodcare Practice,NWL,Ealing,UB5 6WL,"Taywood Road, Northolt, UB5 6WL",,51.5315,-0.376246,10.9264259338,Name + postcode match
+E85714,The Pitshanger Lane Surgery,NWL,Ealing,W5 1RQ,"Pitshanger Lane, Ealing, London, W5 1RQ",,51.526169,-0.313272,11.3151130676,Name + postcode match
+E85715,Broadmead Surgery,NWL,Ealing,UB5 6WL,"Taywood Road, Northolt, UB5 6WL",,51.5315,-0.376246,10.9264259338,Name + postcode match
+E84059,The Allendale Road Surgery,NWL,Hammersmith & Fulham,UB6 0RA,"35 Allendale Road, Brent, Greenford, UB6 0RA",,51.551,-0.3207,12.7393112183,Name + postcode match
+E85006,Waterside Medical Centre,NWL,Hammersmith & Fulham,UB2 4XQ,"4 Tyler Road, Southall, UB2 4XQ",,51.5022,-0.3637,13.0667867661,Name + postcode match
+E85075,Chiswick Family Practice,NWL,Hammersmith & Fulham,W3 8TF,"Osborne Road, Acton, London, W3 8SJ",,51.501703,-0.272741,10.1927070618,Name + postcode match
+E85088,Elmbank Surgery,NWL,Hammersmith & Fulham,W7 3DD,"438 Greenford Avenue, Hanwell, London, W7 3DD",,51.52532,-0.3418,10.9264259338,Name + postcode match
+E85091,Brunswick Surgery,NWL,Hammersmith & Fulham,W5 1AQ,"75 Brunswick Road, Ealing, London, W5 1AQ",,51.52947,-0.30281,10.9264259338,Name + postcode match
+E85098,Islip Manor Medical Centre,NWL,Hammersmith & Fulham,UB5 5RG,"45 Eastcote Lane, Northolt, UB5 5RG",,51.5473,-0.373001,15.1659879684,Name + postcode match
+E85103,Lady Margaret Road Medical Centre,NWL,Hammersmith & Fulham,UB1 2PH,"57 Lady Margaret Road, Southall, UB1 2PH",,51.5132,-0.375773,17.2252044678,Name + postcode match
+E85107,The Mill Hill Surgery,NWL,Hammersmith & Fulham,W3 8QH,"111 Avenue Road, Acton, London, W3 8QH",,51.5052,-0.274431,15.1659879684,Name + postcode match
+E85111,Perivale Medical Clinic,NWL,Hammersmith & Fulham,UB6 8HX,"4 Conway Crescent, Perivale, Greenford, UB6 8HX",,51.5351,-0.333915,13.0667867661,Name + postcode match
+E85116,The Cuckoo Lane Practice,NWL,Hammersmith & Fulham,W7 1DR,"1 Cuckoo Lane, Hanwell, London, W7 3EZ",,51.515179,-0.338022,8.5748300552,Name + postcode match
+E85120001,The Argyle Surgery: Cuckoo Lane Surgery,NWL,Hammersmith & Fulham,,"128 Argyle Road, West Ealing, London, W13 8ER",,51.51975,-0.32251,10.1728639603,Name + postcode match
+E85130,Chiswick Family Practice,NWL,Hammersmith & Fulham,W3 8TF,"Osborne Road, Acton, London, W3 8SJ",,51.501703,-0.272741,10.1927070618,Name + postcode match
+E85623,Somerset Medical Centre,NWL,Hammersmith & Fulham,UB5 6WL,"5 Taywood Road, Northolt, UB5 6WL",,51.5315,-0.376246,13.0667867661,Name + postcode match
+E85624001,Parkview Health Centre: West End Road Surgery,NWL,Hammersmith & Fulham,,"67 Deedmore Road, Coventry, CV2 1XA",,52.4356,-1.46418,11.2539043427,Name + postcode match
+E85633,Southall Medical Centre,NWL,Hammersmith & Fulham,UB1 2PT,"2 Jubilee Gardens, Southall, UB1 2TJ",,51.52133,-0.36929,10.112994194,Name + postcode match
+E85633001,Southall Medical Centre: Norwood Road Surgery,NWL,Hammersmith & Fulham,,"70 Norwood Road, Southall, UB2 4EY",,51.4987,-0.379805,12.1269760132,Name + postcode match
+E85640,The Churchfield Road Surgery,NWL,Hammersmith & Fulham,W3 6DL,"Churchfield Road, Acton, London, W3 6DL",,51.508471,-0.2676,11.4282646179,Name + postcode match
+E85656,Sunrise Medical Centre,NWL,Hammersmith & Fulham,UB1 1HS,"9 Abbotts Road, Southall, UB1 1HS",,51.51124,-0.382121,12.6499996185,Name + postcode match
+E85680,Cloister Road Surgery,NWL,Hammersmith & Fulham,W3 0DF,"41 Cloister Road, Acton, London, W3 0DF",,51.5214,-0.265575,13.0667867661,Name + postcode match
+E85682,Dormers Wells Medical Centre,NWL,Hammersmith & Fulham,UB1 2LU,"143 Burns Avenue, Southall, UB1 2LU",,51.515419,-0.364263,15.1659879684,Name + postcode match
+E85694,The Boileau Road Surgery,NWL,Hammersmith & Fulham,W5 3AJ,"104 Boileau Parade, Ealing, London, W5 3AJ",,51.5194,-0.286822,15.1659879684,Name + postcode match
+E85712,Goodcare Practice,NWL,Hammersmith & Fulham,UB5 6WL,"Taywood Road, Northolt, UB5 6WL",,51.5315,-0.376246,10.9264259338,Name + postcode match
+E85714,The Pitshanger Lane Surgery,NWL,Hammersmith & Fulham,W5 1RQ,"Pitshanger Lane, Ealing, London, W5 1RQ",,51.526169,-0.313272,11.3151130676,Name + postcode match
+E85715,Broadmead Surgery,NWL,Hammersmith & Fulham,UB5 6WL,"Taywood Road, Northolt, UB5 6WL",,51.5315,-0.376246,10.9264259338,Name + postcode match
+E85721,The Avenue Surgery,NWL,Hammersmith & Fulham,UB1 1PZ,"21 Saint George's Avenue, Southall, UB1 1PZ",,51.5125,-0.378089,11.9285030365,Name + postcode match
+E83018001,Watling Medical Centre: London Road Surgery,NWL,Harrow,,"42 London Road, Stanmore, HA7 4NU",,51.6213,-0.296929,11.6330461502,Name + postcode match
+E84008,Simpson House Medical Centre,NWL,Harrow,HA2 8RS,"255 Eastcote Lane, Harrow, HA2 8RS",,51.5617,-0.372417,15.1659879684,Name + postcode match
+E84053,Hatch End Medical Centre,NWL,Harrow,HA5 4RD,"577 Uxbridge Road, Pinner, HA5 4RD",,51.6062,-0.377062,15.1659879684,Name + postcode match
+E84083,Lanfranc Medical Centre,NWL,Harrow,HA1 3QE,"3 Greenford Road, Harrow, HA1 3QE",,51.561454,-0.332748,13.0667867661,Name + postcode match
+E84005001,Kings Road Surgery: Eastcote Surgery,NWL,Hillingdon,,"1A Deane Croft Road, Pinner, HA5 1SS",,51.581,-0.399872,10.1728639603,Name + postcode match
+E85121001,The Guru Nanak Medical Centre: Botwell Medical Centre,NWL,Hillingdon,,"3 Woodlands Road, Southall, UB1 1EQ",,51.5123,-0.387,14.5922613144,Name + postcode match
+E86017,Hayes Medical Centre,NWL,Hillingdon,UB3 4NA,"157 Old Station Road, Hayes, UB3 4NA",,51.501499,-0.422679,13.0667867661,Name + postcode match
+E86019,The Warren Practice,NWL,Hillingdon,UB4 0SG,"The Warren, Hayes, UB4 0SG",,51.519471,-0.409814,11.3151130676,Name + postcode match
+E86030,Brunel Medical Centre,NWL,Hillingdon,UB8 3PH,"3 Kingston Lane, Uxbridge, UB8 3PQ",,51.531816,-0.472328,10.5165462494,Name + postcode match
+E86036,First Care Practice,NWL,Hillingdon,UB10 9QF,"55 Edward Road, Balsall Heath, Birmingham, B12 9LP",,52.4574,-1.88805,8.0325021744,Name + postcode match
+E86637,Heathrow Medical Centre,NWL,Hillingdon,UB3 5AB,"3 Saint Peters Way, Harlington, Hayes, UB3 5AB",,51.49197,-0.43494,13.0667867661,Name + postcode match
+E85024,Carlton Surgery,NWL,Hounslow,TW14 0AX,"112 Hounslow Road, Feltham, TW14 0AX",,51.4533,-0.404583,10.9264259338,Name + postcode match
+E85115,Pentelow Practice,NWL,Hounslow,TW14 9EF,"26 Pentelow Gardens, Feltham, TW14 9EF",,51.456651,-0.416583,10.9264259338,Name + postcode match
+E85681,Jersey Practice,NWL,Hounslow,TW5 9ER,"9 Cranford Lane, Hounslow, TW5 9EP",,51.484,-0.382372,8.3761854172,Name + postcode match
+E85699,Grove Village Medical Centre,NWL,Hounslow,TW14 8SN,"4 Cleeve Court, Feltham, TW14 8SA",,51.44904,-0.43132,12.2919082642,Name + postcode match
+E85708,Gill Medical Practice,NWL,Hounslow,TW14 0AB,"32 Harlington Road East, Feltham, TW14 0AB",,51.4515,-0.404907,13.0667867661,Name + postcode match
+E85713,Hounslow Family Practice,NWL,Hounslow,TW3 4JX,"77 Lampton Road, Hounslow, TW3 4DH",,51.4729,-0.366593,10.1927070618,Name + postcode match
+E85739,HMC Health,NWL,Hounslow,TW5 9ER,"23 Cranford Lane, Hounslow, TW5 9EP",,51.484,-0.382372,7.9263696671,Name + postcode match
+E85739001,HMC Health: The Great West Surgery,NWL,Hounslow,,"23 Cranford Lane, Hounslow, TW5 9EP",,51.484,-0.382372,10.1855401993,Name + postcode match
+E85744,Argyle Health Isleworth Practice,NWL,Hounslow,TW7 7DJ,"146 Twickenham Road, Isleworth, TW7 7DJ",,51.4678,-0.328737,15.1659879684,Name + postcode match
+Y02671,The Practice Heart of Hounslow,NWL,Hounslow,TW3 3LN,"B9055, Stenness, Stromness, KW16 3JZ",,58.993998,-3.208118,9.9971981049,Name + postcode match
+E87004,Health Partners at Violet Melchett,NWL,West London,SW3 5RR,"30 Flood Street, Chelsea, London, SW3 5ST",,51.486892,-0.166712,14.3511238098,Name + postcode match
+E87007,Westbourne Grove Medical Centre,NWL,West London,W11 2SE,"Westbourne Grove, Notting Hill, London, W11 2SE",,51.514489,-0.199545,11.3151130676,Name + postcode match
+E87016,Holland Park Surgery,NWL,West London,W8 7RX,"8 Phillimore Walk, Kensington, London, W8 7RX",,51.5014,-0.194421,13.0667867661,Name + postcode match
+E87047,Earls Court Medical Centre,NWL,West London,SW5 9AD,"248 Earl's Court Road, Earls Court, London, SW5 9AD",,51.4918,-0.192684,15.1659879684,Name + postcode match
+E87065,The Notting Hill Medical Centre,NWL,West London,W11 2EH,"14 Codrington Mews, Notting Hill, London, W11 2EH",,51.51504,-0.20676,15.1659879684,Name + postcode match
+E87067,Colville Health Centre,NWL,West London,W11 1PA,"51 Kensington Park Road, Notting Hill, London, W11 1PA",,51.515864,-0.206178,13.0667867661,Name + postcode match
+E87711,Royal Hospital Chelsea,NWL,West London,SW3 4SR,"Royal Hospital Road, Chelsea, London, SW3 4SR",,51.486889,-0.159127,13.0667867661,Name + postcode match
+E87742,The Golborne Medical Centre,NWL,West London,W10 5PE,"12 Golborne Road, North Kensington, London, W10 5PE",,51.524,-0.2067,15.1659879684,Name + postcode match
+E87750,Earls Court Surgery,NWL,West London,SW5 9JA,"269 Old Brompton Road, Earls Court, London, SW5 9JA",,51.4887,-0.191883,13.0667867661,Name + postcode match
+Y00200,Portobello Medical Centre,NWL,West London,W11 2EH,"14 Codrington Mews, Notting Hill, London, W11 2EH",,51.51504,-0.20676,10.8416337967,Name + postcode match
+Y03441,Earls Court Health and Wellbeing,NWL,West London,SW5 0PT,"5 Hogarth Road, Earls Court, London, SW5 0PT",,51.49251,-0.1927,10.8416337967,Name + postcode match
+G83025,Welling Medical Practice,SEL,Bexley,DA16 2AT,"2 Danson Crescent, Welling, DA16 2AT",,51.460819,0.107985,13.0667867661,Name + postcode match
+G83028,Bexley Group Practice,SEL,Bexley,DA16 3HQ,"76 Upper Wickham Lane, Welling, DA16 3HQ",,51.4658,0.10967,13.0667867661,Name + postcode match
+G83028002,Bexley Group Practice: Station Road Surgery,SEL,Bexley,,"24 Station Road, Belvedere, DA17 6JJ",,51.491502,0.151673,11.508307457,Name + postcode match
+G84006,Summercroft Surgery,SEL,Bromley,BR6 7AR,"1 Starts Hill Road, Orpington, BR6 7AR",,51.367678,0.059419,10.9264259338,Name + postcode match
+G84027,Elm House Surgery,SEL,Bromley,BR3 3FD,"379 Croydon Road, Beckenham, BR3 3FD",,51.4049,-0.032707,13.0667867661,Name + postcode match
+Y06345,Bromleag Care Practice,SEL,Bromley,BR3 1DU,"14 The Crescent, Beckenham, BR3 1DU",,51.409624,-0.026672,13.0667867661,Name + postcode match
+G83016,Royal Arsenal Medical Centre,SEL,Greenwich,SE18 6TE,"Arsenal Way, Woolwich, London, SE18 6GT",,51.492373,0.073485,12.2919082642,Name + postcode match
+G83019,Plumstead Health Centre,SEL,Greenwich,SE18 1BB,"79 Tewson Road, Plumstead, London, SE18 1BB",,51.485326,0.091967,10.021944046,Name + postcode match
+G83025001,Welling Medical Practice: Holly House Surgery,SEL,Greenwich,,"30 Upper Fairfield Road, Leatherhead, KT22 7HH",,51.29691,-0.32973,10.1047258377,Name + postcode match
+G83026001,Triveni PMS: Plumstead Common Road Surgery,SEL,Greenwich,,"34 Plumstead Common Road, Plumstead, London, SE18 3TN",,51.481999,0.070639,11.2679510117,Name + postcode match
+G83027001,Kidbrooke Village Medical Centre,SEL,Greenwich,,"10 Pegler Square, Blackheath, London, SE3 9FW",,51.4611,0.027195,10.2679080963,Name + postcode match
+G83065002,Burney Street Practice: Wallace Centre,SEL,Greenwich,,"48 Burney Street, Greenwich, London, SE10 8EX",,51.47917,-0.008422,8.1057310104,Name + postcode match
+G83654,Bannockburn Surgery,SEL,Greenwich,SE18 1ES,"22 Bannockburn Road, Plumstead, London, SE18 1ES",,51.488187,0.094565,10.9264259338,Name + postcode match
+G83673003,Elmstead Medical Clinic: Campus Surgery,SEL,Greenwich,,"81 William Barefoot Drive, Eltham, London, SE9 3JD",,51.43112,0.05834,8.1687068939,Name + postcode match
+V8R9W,Plumstead Health Centre: Trinity Medical Centre,SEL,Greenwich,,"11 Garland Road, Plumstead, London, SE18 2AE",,51.4788,0.085829,11.4119243622,Name + postcode match
+Y02974,AT Medics: Thamesmead Medical Centre,SEL,Greenwich,SE28 0NY,"5 Thames Reach, Thamesmead, London, SE28 0NY",,51.4985,0.090286,12.545624733,Name + postcode match
+G85002,AT Medics: Streatham High Practice,SEL,Lambeth,SW16 2ST,"6 Gracefield Gardens, Streatham, London, SW16 2ST",,51.432572,-0.127879,14.5680904388,Name + postcode match
+G85011001,Clapham Family Practice: Manor Health Centre,SEL,Lambeth,,"83 Brigstock Road, Thornton Heath, CR7 7JH",,51.397275,-0.1036,9.0477313995,Name + postcode match
+G85054,Lambeth Walk Group Practice,SEL,Lambeth,SW9 6AF,"60 Patmos Road, Stockwell, London, SW9 6AF",,51.4757,-0.10519,15.1659879684,Name + postcode match
+G85086,The South Lambeth Road Practice,SEL,Lambeth,SW8 1UL,"47 Teversham Lane, Vauxhall, London, SW8 1",,51.4766,-0.123659,14.3511238098,Name + postcode match
+G85100,Beckett House Practice,SEL,Lambeth,SW9 9DL,"21 Grantham Road, Brixton, London, SW9 9DL",,51.4695,-0.123532,13.0667867661,Name + postcode match
+G85135,Minet Green Health Practice,SEL,Lambeth,SW9 6AF,"1 Fitzpatrick Road, Stockwell, London, SW9 6AF",,51.47569,-0.105249,8.5019788742,Name + postcode match
+G85136,Waterloo Health Centre,SEL,Lambeth,SE1 7AE,"118 Lower Marsh, Waterloo, London, SE1 7AE",,51.5005,-0.113757,13.0667867661,Name + postcode match
+G85647,The Exchange Surgery,SEL,Lambeth,SW16 2ST,"8 Gracefield Gardens, Streatham, London, SW16 2ST",,51.4326,-0.12793,12.8814239502,Name + postcode match
+G85695,Akerman Medical Practice,SEL,Lambeth,SW9 6AF,"1 Fitzpatrick Road, Stockwell, London, SW9 6AF",,51.47569,-0.105249,13.0667867661,Name + postcode match
+G85708,Dr Curran & Partners,SEL,Lambeth,SW4 6EB,"86 Clapham Manor Street, Clapham, London, SW4 6EB",,51.46543,-0.13621,13.0667867661,Name + postcode match
+Y07020,Lambeth Healthcare Practice,SEL,Lambeth,SE23 1RJ,"Saint German's Road, Forest Hill, London, SE23 1RJ",,51.443248,-0.039744,6.7491197586,Name + postcode match
+D6U6U,Lewisham Care Partnership: Morden Hill Surgery,SEL,Lewisham,,"23 Morden Hill, Lewisham, London, SE13 7NN",,51.46912,-0.012227,14.2285308838,Name + postcode match
+G85015,AT Medics: QRP Surgery,SEL,Lewisham,SE14 5HD,"387 Queen's Road, New Cross Gate, London, SE14 5HD",,51.4743,-0.0472,8.2039461136,Name + postcode match
+G85085,Grove Medical Centre,SEL,Lewisham,SE8 3QH,"3 Windlass Place, Deptford, London, SE8 3QH",,51.4903,-0.035213,13.0667867661,Name + postcode match
+G85105,Vesta Road Surgery,SEL,Lewisham,SE4 2NH,"58 Vesta Road, Brockley, London, SE4 2NH",,51.4687,-0.04063,13.0667867661,Name + postcode match
+J5N4Z,Lewisham Care Partnership: Belmont Hill Surgery,SEL,Lewisham,,"36 Belmont Hill, Hither Green, London, SE13 5AY",,51.4626,-0.004427,14.2285308838,Name + postcode match
+J6X4D,Lewisham Care Partnership: Honor Oak Health Centre,SEL,Lewisham,,"172 Adelaide Avenue, Lewisham, London, SE4 1JN",,51.45708,-0.02499,9.552482605,Name + postcode match
+K2T3Y,The Jenner Practice: Bellingham Green Surgery,SEL,Lewisham,,"The Green, Upper Poppleton, York, YO26 6EL",,53.9804,-1.15343,8.7999820709,Name + postcode match
+N5T5S,The Jenner Practice: South Lewisham Health Centre,SEL,Lewisham,,"Powell Street, Worsbrough, Barnsley, S70 5NZ",,53.5291,-1.46017,11.13377285,Name + postcode match
+T8U5Q,Lewisham Care Partnership: Hilly Fields Medical Centre,SEL,Lewisham,,"172 Adelaide Avenue, Lewisham, London, SE4 1JN",,51.45708,-0.02499,16.1938743591,Name + postcode match
+G85029,Falmouth Road Group Practice,SEL,Southwark ,SE1 4JW,"78 Falmouth Road, The Borough, London, SE1 4JW",,51.4967,-0.093283,15.1659879684,Name + postcode match
+G85034001,Nexus Health Group: Artesian Health Centre,SEL,Southwark ,,"138 Grange Road, Bermondsey, London, SE1 3GF",,51.494099,-0.075002,10.1728639603,Name + postcode match
+G85087,AT Medics: Silverlock Medical Centre,SEL,Southwark ,SE16 3HA,"2 Verney Way, South Bermondsey, London, SE16 3HA",,51.48597,-0.06334,14.7534542084,Name + postcode match
+G85681,The Lordship Lane Surgery,SEL,Southwark ,SE22 8JN,"417 Lordship Lane, East Dulwich, London, SE22 8JN",,51.448393,-0.073372,15.1659879684,Name + postcode match
+Y06113,Qhs GP Care Home Service,SEL,Southwark ,SE16 4BL,"4 Old Jamaica Road, South Bermondsey, London, SE16 4BL",,51.497,-0.069139,17.2252044678,Name + postcode match
+H83004,Farley Road Medical Practice,SWL,Croydon,CR2 7NG,"Farley Road, South Croydon, CR2 7NG",,51.348542,-0.067855,11.3151130676,Name + postcode match
+H83004001,The Farley Road Surgery: Holmbury Grove Surgery,SWL,Croydon,,"130 Grove Road, Bow, London, E3 5TW",,51.5298,-0.03886,11.6388616562,Name + postcode match
+H83008,Addiscombe Road Surgery,SWL,Croydon,CR0 6JJ,"6 Morland Road, Croydon, CR0 6NA",,51.3806,-0.086054,9.9525775909,Name + postcode match
+H83011,North Croydon Medical Centre,SWL,Croydon,CR7 7HQ,"518 London Road, Thornton Heath, CR7 7HQ",,51.3883,-0.111174,15.1659879684,Name + postcode match
+H83012,St James Medical Centre,SWL,Croydon,CR0 2BZ,"189A Saint James's Road, Croydon, CR0 2BZ",,51.3818,-0.09309,15.1659879684,Name + postcode match
+H83012001,St. James's Medical Centre: Castle Hill Avenue Surgery,SWL,Croydon,,"1 Castle Hill Avenue, New Addington, Croydon, CR0 0TH",,51.3484,-0.021299,13.1678590775,Name + postcode match
+H83014,Queenhill Medical Practice,SWL,Croydon,CR2 8DU,"31 Queenhill Road, South Croydon, CR2 8DU",,51.34534,-0.06584,13.0667867661,Name + postcode match
+H83015,Parkside Group Practice,SWL,Croydon,CR2 6EX,"27 Wyche Grove, South Croydon, CR2 6EX",,51.351,-0.097761,13.0667867661,Name + postcode match
+H83020,Eversley Medical Practice,SWL,Croydon,CR7 6AR,"501 London Road, Thornton Heath, CR7 6AR",,51.3881,-0.1118,10.8836174011,Name + postcode match
+H83021,London Road Medical Practice,SWL,Croydon,CR7 6AR,"515 London Road, Thornton Heath, CR7 6AR",,51.3885,-0.111899,15.1659879684,Name + postcode match
+H83037,Auckland Surgery,SWL,Croydon,SE19 2DF,"84 Auckland Road, Crystal Palace, London, SE19 2DF",,51.409548,-0.080911,10.9264259338,Name + postcode match
+H83043003,Shirley Medical Centre: Wickham Road Surgery,SWL,Croydon,,"370 Wickham Road, Croydon, CR0 8BH",,51.37541,-0.04355,11.696023941,Name + postcode match
+H83051001,Thornton Road & Valley Park Surgery: Valley Park Surgery,SWL,Croydon,,"299 Thornton Road, Croydon, CR0 3EW",,51.388031,-0.12075,18.7518787384,Name + postcode match
+H83608,Brigstock Family Practice,SWL,Croydon,CR7 7JH,"83 Brigstock Road, Thornton Heath, CR7 7JH",,51.397275,-0.1036,12.5028181076,Name + postcode match
+H83611,Selhurst Medical Centre,SWL,Croydon,SE25 5QA,"29 Selhurst Road, South Norwood, London, SE25 5QA",,51.3896,-0.0891,13.0667867661,Name + postcode match
+V3N8W,Keston Medical Practice: The Moorings Medical Practice,SWL,Croydon,,"2B Valley Road, Kenley, CR8 5DG",,51.3222,-0.095878,14.5922613144,Name + postcode match
+X7M5Y,Selsdon Park Medical Practice: Mitchley Avenue Surgery,SWL,Croydon,,"97 Addington Road, South Croydon, CR2 8LG",,51.3424,-0.064559,10.2679080963,Name + postcode match
+Y02962,Edridge Road Community Health Centre,SWL,Croydon,CR0 1FE,"2 Edridge Road, Croydon, CR0 1EG",,51.3705,-0.0987,14.3511238098,Name + postcode match
+H84020002,Fairhill Medical Practice: Kingston University,SWL,Kingston,,"14 Fairfield South, Kingston upon Thames, KT1 2UJ",,51.4075,-0.29873,9.9549350739,Name + postcode match
+H84051,Roselawn Surgery,SWL,Kingston,KT3 6AA,"149 Malden Road, New Malden, KT3 6AA",,51.39796,-0.25577,10.9264259338,Name + postcode match
+H85027,Wimbledon Village Surgery,SWL,Merton,SW19 5BY,"5 High Street Wimbledon, Wimbledon, London, SW19 4",,51.425,-0.219644,10.5165462494,Name + postcode match
+H85092,Riverhouse Medical Practice,SWL,Merton,SW19 1YG,"2D East Road, Merton, London, SW19 1UW",,51.4209,-0.183543,10.1927070618,Name + postcode match
+H85649,Colliers Wood Surgery,SWL,Merton,SW19 2BY,"58 High Street Collier's Wood, Colliers Wood, London, SW19 2BY",,51.42076,-0.17584,13.0667867661,Name + postcode match
+H85649001,Colliers Wood Surgery: Lavender Fields Surgery,SWL,Merton,,"58 High Street Collier's Wood, Colliers Wood, London, SW19 2BY",,51.42076,-0.17584,10.1728639603,Name + postcode match
+H85656,Alexandra Road Surgery,SWL,Merton,SW19 7JZ,"39 Alexandra Road, Wimbledon, London, SW19 7JZ",,51.4235,-0.2046,12.2892522812,Name + postcode match
+H85683,Faccini House Surgery,SWL,Merton,SM4 6RT,"64 Middleton Road, Morden, SM4 6RT",,51.389717,-0.189998,13.0667867661,Name + postcode match
+E85045,Twickenham Park Medical Centre,SWL,Richmond,TW13 6HD,"192 Twickenham Road, Hanworth, Feltham, TW13 6HD",,51.43705,-0.37272,12.4608335495,Name + postcode match
+H84012001,York Medical Practice: St. Mary's College,SWL,Richmond,,"271 Waldegrave Road, Twickenham, TW1 4SX",,51.4362,-0.335892,14.3474884033,Name + postcode match
+H84040,Hampton Medical Centre,SWL,Richmond,TW12 2PB,"49AA Priory Road, Hampton, TW12 2PB",,51.418476,-0.372592,13.0667867661,Name + postcode match
+H84057,Staines Road Medical Centre,SWL,Richmond,TW2 5AU,"Staines Road, Twickenham, TW2 5AU",,51.440216,-0.356848,11.3151130676,Name + postcode match
+H84623,Hampton Hill Medical Centre,SWL,Richmond,TW12 1NY,"102 High Street, Hampton Hill, Hampton, TW12 1NY",,51.427724,-0.354911,15.1659879684,Name + postcode match
+Y01206,Glebe Road Surgery,SWL,Richmond,SW13 0DR,"1 Glebe Road, Barnes, London, SW13 0DR",,51.473951,-0.242733,13.0667867661,Name + postcode match
+E85045,Twickenham Park Medical Centre,SWL,Sutton,TW13 6HD,"192 Twickenham Road, Hanworth, Feltham, TW13 6HD",,51.43705,-0.37272,12.4608335495,Name + postcode match
+H84012001,York Medical Practice: St. Mary's College,SWL,Sutton,,"271 Waldegrave Road, Twickenham, TW1 4SX",,51.4362,-0.335892,14.3474884033,Name + postcode match
+H84040,Hampton Medical Centre,SWL,Sutton,TW12 2PB,"49AA Priory Road, Hampton, TW12 2PB",,51.418476,-0.372592,13.0667867661,Name + postcode match
+H84057,Staines Road Medical Centre,SWL,Sutton,TW2 5AU,"Staines Road, Twickenham, TW2 5AU",,51.440216,-0.356848,11.3151130676,Name + postcode match
+H84623,Hampton Hill Medical Centre,SWL,Sutton,TW12 1NY,"102 High Street, Hampton Hill, Hampton, TW12 1NY",,51.427724,-0.354911,15.1659879684,Name + postcode match
+Y01206,Glebe Road Surgery,SWL,Sutton,SW13 0DR,"1 Glebe Road, Barnes, London, SW13 0DR",,51.473951,-0.242733,13.0667867661,Name + postcode match
+H85008001,Roehampton Lane Surgery: Ashburton Medical Practice,SWL,Wandsworth,,"Surgery Lane & Wells Avenue, Hartlepool, TS24 9DN",,54.704,-1.22342,9.5953321457,Name + postcode match
+H85012001,Putneymead Group Medical Practice: Student Medical Centre,SWL,Wandsworth,,"350 Upper Richmond Road, Putney, London, SW15 6TH",,51.461703,-0.220303,12.2335233688,Name + postcode match
+H85057,Elborough Street Surgery,SWL,Wandsworth,SW18 5DS,"81 Elborough Street, Wandsworth, London, SW18 5DS",,51.442067,-0.201302,13.0667867661,Name + postcode match
+H85075,Haider Practice,SWL,Wandsworth,SW11 1SW,"162 Saint John's Hill, Battersea, London, SW11 1SW",,51.46,-0.179402,10.9264259338,Name + postcode match
+H85082,Triangle Surgery,SWL,Wandsworth,SW18 4HX,"2 Broomhill Road, Wandsworth, London, SW18 4HX",,51.456705,-0.1983,10.9264259338,Name + postcode match
+H85659,St Johns Hill Surgery,SWL,Wandsworth,SW11 1SW,"Saint John's Hill, Wandsworth, London, SW11 1SW",,51.459692,-0.179587,13.5316133499,Name + postcode match
+H85680,Tooting South Medical Centre,SWL,Wandsworth,SW17 9HQ,"22 Otterburn Street, Tooting, London, SW17 9HQ",,51.42209,-0.16162,15.1659879684,Name + postcode match
+Y01132,Chartfield Surgery,SWL,Wandsworth,SW15 6HG,"30 Chartfield Avenue, Putney, London, SW15 6HG",,51.4573,-0.226388,10.9264259338,Name + postcode match
