@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from pathlib import Path
 from urllib.parse import quote
 
@@ -12,7 +11,13 @@ from branca.colormap import linear
 from streamlit_folium import st_folium
 
 from build_weighted_priority_map import load_community_pharmacies, load_family_hubs, load_gp_practices
-from webapp.analysis import INDEX_DEFINITIONS, AnalysisResult, run_analysis
+from webapp.analysis import (
+    DEFAULT_CATCHMENT_RADIUS_M,
+    DEFAULT_HUB_SCORE_WEIGHTS,
+    INDEX_DEFINITIONS,
+    AnalysisResult,
+    run_analysis,
+)
 from webapp.config import AppConfig, ICB_CHOICES
 from webapp.data_access import load_asset_counts, load_neighbourhoods
 from webapp.data_validation import ValidationReport, validate_config
@@ -355,36 +360,31 @@ def inject_styles() -> None:
     )
 
 
-PPL_BANNER_WAVE = Path("PPL Design System/assets/ref-banner-wave.png")
-
-
-@st.cache_data(show_spinner=False)
-def _b64(path_str: str) -> str:
-    return base64.b64encode(Path(path_str).read_bytes()).decode()
-
-
 def _sidebar_header() -> None:
-    if PPL_BANNER_WAVE.exists():
-        b64 = _b64(str(PPL_BANNER_WAVE))
-        st.html(
-            f"""
-            <div style="margin:-2rem -2rem 0 -2rem;overflow:hidden;line-height:0">
-                <img src="data:image/png;base64,{b64}"
-                     style="display:block;width:calc(100% + 4rem);max-width:none">
+    st.html(
+        """
+        <div style="margin:-2rem -2rem 0 -2rem;overflow:hidden;line-height:0">
+            <svg viewBox="0 0 1000 300" preserveAspectRatio="none"
+                 style="display:block;width:calc(100% + 4rem);height:116px;max-width:none">
+                <path d="M0,0 L1000,0 L1000,140 C820,95 680,260 460,250 C280,242 140,150 0,210 Z"
+                      fill="#D2C4DC"></path>
+                <path d="M0,0 L1000,0 L1000,100 C820,55 680,220 460,210 C280,202 140,110 0,170 Z"
+                      fill="#724CBF" opacity="0.75"></path>
+            </svg>
+        </div>
+        <div style="padding:12px 0 14px;border-bottom:1px solid rgba(255,255,255,.14);
+                    margin:0 0 12px;font-family:Poppins,Inter,sans-serif">
+            <div style="color:rgba(255,255,255,.55);font-size:0.6rem;font-weight:700;
+                        letter-spacing:.1em;text-transform:uppercase;line-height:1">
+                Decision Support
             </div>
-            <div style="padding:12px 0 14px;border-bottom:1px solid rgba(255,255,255,.14);
-                        margin-bottom:12px;font-family:Poppins,Inter,sans-serif">
-                <div style="color:rgba(255,255,255,.55);font-size:0.6rem;font-weight:700;
-                            letter-spacing:.1em;text-transform:uppercase;line-height:1">
-                    Decision Support
-                </div>
-                <div style="color:white;font-size:0.88rem;font-weight:700;
-                            line-height:1.3;margin-top:3px">
-                    Neighbourhood Hub<br>Explorer
-                </div>
+            <div style="color:white;font-size:0.88rem;font-weight:700;
+                        line-height:1.3;margin-top:3px">
+                Neighbourhood Hub<br>Explorer
             </div>
-            """
-        )
+        </div>
+        """
+    )
 
 
 def build_config() -> AppConfig:
@@ -598,11 +598,9 @@ def render_intro_page(report: ValidationReport, inventory: dict[str, int], curre
                 <div style="background:#F2EFFF;border-left:3px solid #490E6F;border-radius:0 6px 6px 0;
                             padding:11px 16px;font-family:ui-monospace,monospace;font-size:0.8rem;
                             color:#0D0517;margin-bottom:16px;line-height:1.9">
-                    Hub Score =&nbsp; <strong>0.60</strong> &times; host LSOA need score<br>
+                    Hub Score =&nbsp; <strong>selected host LSOA weight</strong> &times; host LSOA need score<br>
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;
-                    <strong>0.25</strong> &times; mean need score within 500 m<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;
-                    <strong>0.15</strong> &times; mean need score 500 m – 2 km
+                    <strong>selected catchment weight</strong> &times; distance-weighted mean need score within the chosen radius
                 </div>
 
                 <div style="background:#FFF8EC;border:1px solid #D9A24A;border-radius:8px;
@@ -664,6 +662,46 @@ def selected_indices_controls() -> tuple[list[str], dict[str, float], float]:
         )
     st.metric("Weight total", f"{total_weight:.0f}")
     return selected_indices, weights, total_weight
+
+
+def hub_score_weight_controls() -> tuple[dict[str, float], float]:
+    st.subheader("Hub Scoring")
+    st.caption("Control how much the host LSOA and the continuous catchment contribute to the hub score.")
+    hub_score_weights = {
+        "host_lsoa": st.slider(
+            "Host LSOA weight",
+            min_value=0,
+            max_value=100,
+            value=int(DEFAULT_HUB_SCORE_WEIGHTS["host_lsoa"]),
+            step=5,
+            key="hub_weight_host_lsoa",
+        ),
+        "catchment": st.slider(
+            "Catchment weight",
+            min_value=0,
+            max_value=100,
+            value=int(DEFAULT_HUB_SCORE_WEIGHTS["catchment"]),
+            step=5,
+            key="hub_weight_catchment",
+        ),
+    }
+    total_weight = float(sum(hub_score_weights.values()))
+    st.metric("Hub weight total", f"{total_weight:.0f}")
+    return {name: float(value) for name, value in hub_score_weights.items()}, total_weight
+
+
+def catchment_radius_control() -> float:
+    st.caption("Distance decays linearly to zero at the chosen radius, so nearby LSOAs count more than farther ones.")
+    return float(
+        st.slider(
+            "Catchment radius (metres)",
+            min_value=250,
+            max_value=3000,
+            value=int(DEFAULT_CATCHMENT_RADIUS_M),
+            step=250,
+            key="catchment_radius_m",
+        )
+    )
 
 
 def parse_postcodes(raw_text: str) -> list[str]:
@@ -849,6 +887,8 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     lower_left, lower_right = st.columns([1.05, 0.95], gap="large")
     with lower_left:
         selected_indices, weights, total_weight = selected_indices_controls()
+        hub_score_weights, hub_weight_total = hub_score_weight_controls()
+        catchment_radius_m = catchment_radius_control()
     with lower_right:
         st.markdown("#### Candidate hub locations")
         candidate_postcodes_raw = st.text_area(
@@ -878,13 +918,29 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
                 )
                 or "None selected",
             },
+            {
+                "Setting": "Hub scoring weights",
+                "Value": (
+                    f"Host LSOA ({hub_score_weights['host_lsoa']:.0f}), "
+                    f"Catchment ({hub_score_weights['catchment']:.0f})"
+                ),
+            },
+            {"Setting": "Catchment radius", "Value": f"{catchment_radius_m:,.0f} m"},
         ]
     )
     st.dataframe(audit_frame, use_container_width=True, hide_index=True)
 
-    can_run = bool(selected_indices) and total_weight == 100 and report.can_run_analysis and bool(candidate_postcodes)
+    can_run = (
+        bool(selected_indices)
+        and total_weight == 100
+        and hub_weight_total == 100
+        and report.can_run_analysis
+        and bool(candidate_postcodes)
+    )
     if total_weight != 100:
         st.error("Weights must sum to 100 before analysis can run.")
+    if hub_weight_total != 100:
+        st.error("Hub scoring weights must sum to 100 before analysis can run.")
     if not selected_indices:
         st.error("Select at least one index.")
     if not candidate_postcodes:
@@ -902,6 +958,8 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
                         geography_mode=geography_mode,
                         icb_name=icb_name,
                         index_weights=weights,
+                        hub_score_weights=hub_score_weights,
+                        catchment_radius_m=catchment_radius_m,
                         candidate_postcodes=candidate_postcodes,
                         selected_neighbourhoods=selected_neighbourhoods,
                     )
@@ -982,6 +1040,7 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
     for _, row in valid_candidates.iterrows():
         hub_score_pct = pd.to_numeric(pd.Series([row.get("hub_score_pct")]), errors="coerce").iloc[0]
         hub_score_label = f"{hub_score_pct:.2f}" if pd.notna(hub_score_pct) else "N/A"
+        catchment_radius_m = pd.to_numeric(pd.Series([row.get("catchment_radius_m")]), errors="coerce").iloc[0]
         popup = folium.Popup(
             html=(
                 f"<strong>{row['postcode']}</strong><br>"
@@ -991,6 +1050,17 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
             ),
             max_width=260,
         )
+        if pd.notna(catchment_radius_m) and catchment_radius_m > 0:
+            folium.Circle(
+                location=[row.geometry.y, row.geometry.x],
+                radius=float(catchment_radius_m),
+                color="#724CBF",
+                weight=2,
+                fill=True,
+                fill_color="#9576FF",
+                fill_opacity=0.08,
+                opacity=0.55,
+            ).add_to(fmap)
         folium.CircleMarker(
             location=[row.geometry.y, row.geometry.x],
             radius=7,
@@ -1060,10 +1130,9 @@ def render_outputs_page() -> None:
         "hub_score_pct",
         "LSOA_code",
         "host_need_score_pct",
-        "mean_need_score_0_to_500m_pct",
-        "mean_need_score_500m_to_2km_pct",
-        "lsoas_0_to_500m",
-        "lsoas_500m_to_2km",
+        "weighted_catchment_need_score_pct",
+        "lsoas_in_catchment",
+        "catchment_radius_m",
         "geocode_source",
     ]
     available_columns = [column for column in ordered_columns if column in table.columns]
@@ -1074,15 +1143,23 @@ def render_outputs_page() -> None:
         f"{INDEX_DEFINITIONS[index_name]['label']} ({weight:.0f})"
         for index_name, weight in result.metadata["index_weights"].items()
     )
+    hub_weights = result.metadata.get("hub_score_weights", DEFAULT_HUB_SCORE_WEIGHTS)
+    catchment_radius_m = float(result.metadata.get("catchment_radius_m", DEFAULT_CATCHMENT_RADIUS_M))
+    hub_weights_summary = (
+        f"Host LSOA ({hub_weights['host_lsoa']:.0f}), "
+        f"Catchment ({hub_weights['catchment']:.0f})"
+    )
     neighbourhood_summary = result.metadata.get("selected_neighbourhoods", [])
     st.write(f"Selected indices and weights: {weights_summary}")
+    st.write(f"Hub scoring weights: {hub_weights_summary}")
+    st.write(f"Catchment radius: {catchment_radius_m:,.0f} m")
     if neighbourhood_summary:
         st.write(f"Neighbourhood focus: {', '.join(neighbourhood_summary)}")
     else:
         st.write("Neighbourhood focus: full selected geography.")
     st.write(
         "Need Score uses min-max scaled indices within the selected geography. Hub Score combines the host LSOA "
-        "Need Score with nearby centroid-based demand using 60/25/15 proximity weights."
+        "Need Score with a linearly distance-weighted catchment mean inside the selected radius."
     )
 
     st.subheader("Audit")

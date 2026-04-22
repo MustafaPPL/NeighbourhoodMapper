@@ -40,6 +40,12 @@ INDEX_DEFINITIONS = {
     },
 }
 
+DEFAULT_HUB_SCORE_WEIGHTS = {
+    "host_lsoa": 60.0,
+    "catchment": 40.0,
+}
+DEFAULT_CATCHMENT_RADIUS_M = 2000
+
 
 @dataclass(frozen=True)
 class AnalysisResult:
@@ -92,30 +98,48 @@ def build_need_scores(
     return scoped
 
 
-def _score_single_candidate(candidate_row: pd.Series, centroids: gpd.GeoDataFrame) -> dict[str, object]:
+def _score_single_candidate(
+    candidate_row: pd.Series,
+    centroids: gpd.GeoDataFrame,
+    hub_score_weights: dict[str, float],
+    catchment_radius_m: float,
+) -> dict[str, object]:
     distances = centroids.geometry.distance(candidate_row.geometry)
     host_lsoa = candidate_row["LSOA_code"]
 
     host_need = centroids.loc[centroids["LSOA_code"].eq(host_lsoa), "need_score"]
     host_need_value = float(host_need.iloc[0]) if not host_need.empty and pd.notna(host_need.iloc[0]) else pd.NA
 
-    local_band = centroids[(distances <= 500) & (~centroids["LSOA_code"].eq(host_lsoa))]
-    wider_band = centroids[(distances > 500) & (distances <= 2000) & (~centroids["LSOA_code"].eq(host_lsoa))]
+    in_catchment = centroids[(distances <= catchment_radius_m) & (~centroids["LSOA_code"].eq(host_lsoa))].copy()
+    if not in_catchment.empty:
+        in_catchment["distance_m"] = distances.loc[in_catchment.index]
+        in_catchment["distance_weight"] = 1 - (in_catchment["distance_m"] / catchment_radius_m)
+        in_catchment = in_catchment[in_catchment["distance_weight"] > 0].copy()
 
-    local_mean = local_band["need_score"].mean() if not local_band.empty else 0.0
-    wider_mean = wider_band["need_score"].mean() if not wider_band.empty else 0.0
+    catchment_mean = 0.0
+    if not in_catchment.empty:
+        catchment_scores = pd.to_numeric(in_catchment["need_score"], errors="coerce")
+        catchment_weights = pd.to_numeric(in_catchment["distance_weight"], errors="coerce")
+        valid_mask = catchment_scores.notna() & catchment_weights.notna() & (catchment_weights > 0)
+        if valid_mask.any():
+            catchment_mean = float(
+                (catchment_scores.loc[valid_mask] * catchment_weights.loc[valid_mask]).sum()
+                / catchment_weights.loc[valid_mask].sum()
+            )
+
+    host_weight = hub_score_weights["host_lsoa"] / 100.0
+    catchment_weight = hub_score_weights["catchment"] / 100.0
 
     if pd.isna(host_need_value):
         hub_score = pd.NA
     else:
-        hub_score = (0.60 * float(host_need_value)) + (0.25 * float(local_mean)) + (0.15 * float(wider_mean))
+        hub_score = (host_weight * float(host_need_value)) + (catchment_weight * float(catchment_mean))
 
     return {
         "host_need_score": host_need_value,
-        "mean_need_score_0_to_500m": float(local_mean),
-        "mean_need_score_500m_to_2km": float(wider_mean),
-        "lsoas_0_to_500m": int(len(local_band)),
-        "lsoas_500m_to_2km": int(len(wider_band)),
+        "weighted_catchment_need_score": float(catchment_mean),
+        "lsoas_in_catchment": int(len(in_catchment)),
+        "catchment_radius_m": float(catchment_radius_m),
         "hub_score": hub_score,
     }
 
@@ -124,6 +148,8 @@ def rank_candidate_hubs(
     need_scores: gpd.GeoDataFrame,
     candidate_postcodes: list[str],
     config: AppConfig,
+    hub_score_weights: dict[str, float],
+    catchment_radius_m: float,
 ) -> tuple[gpd.GeoDataFrame, list[str], list[str]]:
     geocoded = geocode_candidate_postcodes(candidate_postcodes, config)
     assigned, unresolved = assign_candidates_to_lsoa(geocoded.candidates, need_scores, config)
@@ -138,17 +164,14 @@ def rank_candidate_hubs(
     rows: list[dict[str, object]] = []
     for _, candidate in assigned_bng.iterrows():
         row = candidate.drop(labels=["geometry"]).to_dict()
-        row.update(_score_single_candidate(candidate, centroids))
+        row.update(_score_single_candidate(candidate, centroids, hub_score_weights, catchment_radius_m))
         rows.append(row)
 
     scored = pd.DataFrame(rows)
     scored["hub_score_pct"] = (pd.to_numeric(scored["hub_score"], errors="coerce") * 100).round(2)
     scored["host_need_score_pct"] = (pd.to_numeric(scored["host_need_score"], errors="coerce") * 100).round(2)
-    scored["mean_need_score_0_to_500m_pct"] = (
-        pd.to_numeric(scored["mean_need_score_0_to_500m"], errors="coerce") * 100
-    ).round(2)
-    scored["mean_need_score_500m_to_2km_pct"] = (
-        pd.to_numeric(scored["mean_need_score_500m_to_2km"], errors="coerce") * 100
+    scored["weighted_catchment_need_score_pct"] = (
+        pd.to_numeric(scored["weighted_catchment_need_score"], errors="coerce") * 100
     ).round(2)
     scored = scored.sort_values(["hub_score", "host_need_score"], ascending=[False, False]).reset_index(drop=True)
     scored["rank"] = scored.index + 1
@@ -164,6 +187,8 @@ def run_analysis(
     geography_mode: str,
     icb_name: str | None,
     index_weights: dict[str, float],
+    hub_score_weights: dict[str, float],
+    catchment_radius_m: float,
     candidate_postcodes: list[str],
     selected_neighbourhoods: list[str] | None = None,
 ) -> AnalysisResult:
@@ -182,6 +207,8 @@ def run_analysis(
         need_scores,
         candidate_postcodes,
         config,
+        hub_score_weights,
+        catchment_radius_m,
     )
     if candidate_scores.empty:
         raise ValueError(
@@ -191,6 +218,8 @@ def run_analysis(
         "geography_mode": geography_mode,
         "icb_name": icb_name,
         "index_weights": index_weights,
+        "hub_score_weights": hub_score_weights,
+        "catchment_radius_m": float(catchment_radius_m),
         "selected_neighbourhoods": selected_neighbourhoods or [],
         "lsoa_count": int(len(need_scores)),
         "candidate_count": int(len(candidate_scores)),
