@@ -19,11 +19,11 @@ from webapp.data_validation import ValidationReport, validate_config
 st.set_page_config(page_title="Neighbourhood Hub Ranker", layout="wide")
 
 LOGO_PATH = Path("data/logos/PPL Logo_RGB.png")
-BRAND_PURPLE = "#5A2A83"
-BRAND_PURPLE_DARK = "#43205F"
-BRAND_PURPLE_SOFT = "#F3ECFB"
-BRAND_PURPLE_MID = "#E4D4F6"
-BRAND_TEXT = "#1F2340"
+BRAND_PURPLE = "#490E6F"
+BRAND_PURPLE_DARK = "#350355"
+BRAND_PURPLE_SOFT = "#FAF6FD"
+BRAND_PURPLE_MID = "#EAE3F0"
+BRAND_TEXT = "#0D0517"
 PAGES = ["Introduction", "Configure Inputs", "Outputs"]
 ICB_CODE_BY_NAME = {
     "NHS North Central London ICB": "NCL",
@@ -60,101 +60,151 @@ def render_app_header() -> None:
 def inject_styles() -> None:
     st.markdown(
         """
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
         <style>
         :root {
-            --brand-purple: #5A2A83;
-            --brand-purple-dark: #43205F;
-            --brand-purple-soft: #F3ECFB;
-            --brand-purple-mid: #E4D4F6;
-            --brand-text: #1F2340;
+            --ppl-purple: #490E6F;
+            --ppl-deep: #350355;
+            --ppl-lilac: #9576FF;
+            --ppl-ink: #0D0517;
+            --ppl-ink2: #3B2F48;
+            --ppl-muted: #6B6078;
+            --ppl-line: #EAE3F0;
+            --ppl-line-strong: #D9CFE3;
+            --ppl-paper: #FFFFFF;
+            --ppl-cream: #FAF6FD;
+            --shadow-sm: 0 1px 2px rgba(73,14,111,.06), 0 2px 8px rgba(73,14,111,.04);
+            --shadow-md: 0 4px 14px rgba(73,14,111,.08), 0 10px 30px rgba(73,14,111,.06);
+            --shadow-lg: 0 20px 50px rgba(73,14,111,.14);
+        }
+        html, body, [class*="css"] {
+            font-family: 'Poppins', Inter, system-ui, sans-serif !important;
+        }
+        .stApp {
+            background: var(--ppl-cream);
         }
         .block-container {
             padding-top: 1.25rem;
             padding-bottom: 2rem;
             max-width: 1400px;
         }
+        section[data-testid="stSidebar"] {
+            background-color: var(--ppl-purple);
+        }
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3,
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] .stMarkdown {
+            color: white !important;
+        }
+        section[data-testid="stSidebar"] .stExpander details {
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 8px;
+            background: rgba(255,255,255,.06);
+        }
+        section[data-testid="stSidebar"] .stExpander summary {
+            color: white !important;
+        }
+        section[data-testid="stSidebar"] input,
+        section[data-testid="stSidebar"] textarea {
+            background: rgba(255,255,255,.1) !important;
+            color: white !important;
+            border-color: rgba(255,255,255,.2) !important;
+        }
+        .sidebar-credentials {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,.5);
+            text-align: center;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,.12);
+            margin-top: 16px;
+            line-height: 1.6;
+        }
         .brand-fallback {
-            color: var(--brand-purple);
+            color: var(--ppl-purple);
             font-weight: 800;
             font-size: 2.2rem;
             line-height: 1;
         }
         .brand-kicker {
-            color: var(--brand-purple);
-            font-size: 0.82rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
+            color: var(--ppl-purple);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
             margin-bottom: 2px;
         }
         .brand-heading {
-            color: var(--brand-text);
+            color: var(--ppl-ink);
             font-size: 1.35rem;
             font-weight: 700;
             line-height: 1.1;
         }
         .brand-note {
-            color: #6a7288;
+            color: var(--ppl-muted);
             font-size: 0.95rem;
             text-align: left;
             max-width: 640px;
             margin-top: 6px;
         }
         .hero-shell {
-            border: 1px solid var(--brand-purple-mid);
+            border: 1px solid var(--ppl-line);
             border-radius: 24px;
             padding: 24px 28px;
-            background: linear-gradient(180deg, #fdfbff 0%, var(--brand-purple-soft) 100%);
-            box-shadow: 0 10px 30px rgba(90, 42, 131, 0.08);
+            background: var(--ppl-paper);
+            box-shadow: var(--shadow-md);
             margin-bottom: 18px;
         }
         .hero-brand {
-            color: var(--brand-purple);
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            font-size: 0.85rem;
+            color: var(--ppl-purple);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            font-size: 0.72rem;
             text-transform: uppercase;
             margin-bottom: 6px;
         }
         .hero-title {
-            color: var(--brand-text);
+            color: var(--ppl-ink);
             font-size: 2.2rem;
             font-weight: 700;
             line-height: 1.05;
             margin-bottom: 8px;
         }
         .hero-subtitle {
-            color: #58627a;
+            color: var(--ppl-ink2);
             font-size: 1.05rem;
             max-width: 920px;
         }
         .nav-card {
-            border: 1px solid var(--brand-purple-mid);
-            border-radius: 16px;
+            border: 1px solid var(--ppl-line);
+            border-radius: 12px;
             padding: 14px 16px;
-            background: #ffffff;
+            background: var(--ppl-paper);
             min-height: 170px;
-            box-shadow: 0 8px 18px rgba(90, 42, 131, 0.05);
-            transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+            box-shadow: var(--shadow-sm);
+            transition: transform 150ms cubic-bezier(.2,.7,.2,1), box-shadow 150ms cubic-bezier(.2,.7,.2,1), border-color 150ms cubic-bezier(.2,.7,.2,1);
         }
         .nav-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--brand-purple);
-            box-shadow: 0 12px 24px rgba(90, 42, 131, 0.12);
+            transform: translateY(-1px);
+            border-color: var(--ppl-purple);
+            box-shadow: var(--shadow-md);
         }
         .nav-card-active {
-            border-color: var(--brand-purple);
-            background: linear-gradient(180deg, #ffffff 0%, #f8f3fd 100%);
-            box-shadow: 0 10px 22px rgba(90, 42, 131, 0.10);
+            border-color: var(--ppl-purple);
+            background: var(--ppl-paper);
+            box-shadow: var(--shadow-md);
         }
         .nav-card h4 {
             margin: 0 0 6px 0;
-            color: var(--brand-text);
+            color: var(--ppl-ink);
             font-size: 1rem;
         }
         .nav-card p {
             margin: 0;
-            color: #667085;
+            color: var(--ppl-muted);
             font-size: 0.95rem;
         }
         .nav-action {
@@ -165,54 +215,57 @@ def inject_styles() -> None:
             min-height: 42px;
         }
         .section-shell {
-            border: 1px solid var(--brand-purple-mid);
-            border-radius: 22px;
+            border: 1px solid var(--ppl-line);
+            border-radius: 12px;
             padding: 18px 20px;
-            background: #ffffff;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+            background: var(--ppl-paper);
+            box-shadow: var(--shadow-sm);
             margin-bottom: 18px;
         }
         .section-title {
-            color: var(--brand-text);
+            color: var(--ppl-ink);
             font-size: 1.55rem;
             font-weight: 700;
             margin-bottom: 6px;
         }
         .section-copy {
-            color: #667085;
+            color: var(--ppl-muted);
             margin-bottom: 14px;
         }
         .mini-label {
-            color: var(--brand-purple);
-            font-size: 0.82rem;
+            color: var(--ppl-purple);
+            font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
             margin-bottom: 6px;
         }
         .stButton > button, div[data-testid="stDownloadButton"] > button {
-            background: var(--brand-purple);
+            background: var(--ppl-purple);
             color: white;
-            border: 1px solid var(--brand-purple);
+            border: 1px solid var(--ppl-purple);
             border-radius: 999px;
             font-weight: 600;
+            font-family: 'Poppins', Inter, system-ui, sans-serif;
+            transition: background 150ms cubic-bezier(.2,.7,.2,1), border-color 150ms cubic-bezier(.2,.7,.2,1);
         }
         .stButton > button:hover, div[data-testid="stDownloadButton"] > button:hover {
-            background: var(--brand-purple-dark);
-            border-color: var(--brand-purple-dark);
+            background: var(--ppl-deep);
+            border-color: var(--ppl-deep);
             color: white;
         }
         input[type="radio"] {
-            accent-color: var(--brand-purple);
+            accent-color: var(--ppl-purple);
         }
         div[role="radiogroup"] label[data-baseweb="radio"] {
             align-items: center;
         }
         div[data-testid="stMetric"] {
-            background: linear-gradient(180deg, #ffffff 0%, #fbf8ff 100%);
-            border: 1px solid var(--brand-purple-mid);
+            background: var(--ppl-paper);
+            border: 1px solid var(--ppl-line);
             padding: 10px 12px;
-            border-radius: 16px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
         }
         @media (max-width: 900px) {
             .brand-note {
@@ -383,7 +436,7 @@ def render_intro_page(report: ValidationReport, inventory: dict[str, int], curre
                 unsafe_allow_html=True,
             )
             if st.button(
-                f"Open {title}",
+                f"Open {title.lower()}",
                 key=f"nav_{page_name}",
                 use_container_width=True,
                 type="secondary" if current_page == page_name else "primary",
@@ -508,8 +561,8 @@ def build_neighbourhood_preview_map(
         properties = feature["properties"]
         selected = properties.get("nghbrhd") in selected_set
         return {
-            "fillColor": "#6f3cc3" if selected else "#efe7fb",
-            "color": "#4f2d86" if selected else "#bba8e3",
+            "fillColor": "#724CBF" if selected else "#F2EFFF",
+            "color": "#490E6F" if selected else "#D2C4DC",
             "weight": 2.0 if selected else 1.0,
             "fillOpacity": 0.78 if selected else 0.35,
         }
@@ -768,10 +821,10 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
         folium.CircleMarker(
             location=[row.geometry.y, row.geometry.x],
             radius=7,
-            color="#0f172a",
+            color="#350355",
             weight=1,
             fill=True,
-            fill_color="#1d4ed8",
+            fill_color="#9576FF",
             fill_opacity=0.95,
             popup=popup,
         ).add_to(fmap)
@@ -882,6 +935,10 @@ def main() -> None:
         query_page = PAGES[0]
 
     page = st.sidebar.radio("Pages", options=PAGES, index=PAGES.index(query_page))
+    st.sidebar.markdown(
+        '<div class="sidebar-credentials">B Corp · Social Enterprise UK<br>FT Leading Consultancy 2025</div>',
+        unsafe_allow_html=True,
+    )
     if page != query_page:
         st.query_params["page"] = page
     if page == "Introduction":

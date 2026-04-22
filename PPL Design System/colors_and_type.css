@@ -1,0 +1,264 @@
+/* =============================================================
+   PPL Design System — colours & typography foundations
+   Single source of truth for PPL colour tokens, type scale and
+   semantic text styles. Load this FIRST in any PPL surface.
+
+   Sourced from:
+     - assets/ref-palette.png   (brand-guide colour spread)
+     - assets/ref-typography.png (Poppins Bold / Regular rules)
+     - design_handoff_housing_gpt/HousingGPT.html (live prototype
+       values — radii, shadow, tints are all lifted from there)
+   ============================================================= */
+
+/* Poppins — the PPL typeface. No .ttf checked in; see fonts/README.md
+   for self-hosting instructions. Inter is the documented fallback. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* -------- BRAND COLOURS -------- */
+  /* "The PPL purple is our primary colour. It is recognisably and
+     distinctly PPL." — brand guide. Use #490E6F most frequently. */
+  --ppl:        #490E6F;  /* Primary — the PPL purple. Most-used. */
+  --ppl-deep:   #350355;  /* Secondary deep — for contrast moments */
+  --ppl-mid:    #724CBF;  /* Secondary mid — inside waves, not on UI */
+  --ppl-lilac:  #9576FF;  /* Bright lilac — POP colour, use sparingly */
+
+  /* Tints — for background cards, soft surfaces, meta pills */
+  --ppl-tint-1: #D2C4DC;
+  --ppl-tint-2: #EDE7F1;
+  --ppl-tint-3: #F2EFFF;
+
+  /* Gradients — brand rule: **ONLY inside wave motifs**, never on
+     buttons or cards. */
+  --grad-wave-primary: linear-gradient(90deg, #490E6F 0%, #724CBF 100%);
+  --grad-wave-deep:    linear-gradient(90deg, #490E6F 0%, #350355 100%);
+  --grad-wave-soft:    linear-gradient(90deg, #F2EFFF 0%, #9576FF 100%);
+
+  /* -------- NEUTRALS -------- */
+  --ink:         #0D0517;  /* Primary text on light */
+  --ink-2:       #3B2F48;  /* Secondary text */
+  --muted:       #6B6078;  /* Muted meta / hint text */
+  --line:        #EAE3F0;  /* Default hairline border */
+  --line-strong: #D9CFE3;  /* Emphasised border */
+  --paper:       #FFFFFF;  /* Card surface */
+  --cream:       #FAF6FD;  /* App / page background */
+
+  /* -------- SEMANTIC (accent) -------- */
+  --success: #5AA36D;
+  --warning: #D9A24A;
+  --danger:  #C04A3F;
+  --info:    #3F6FC0;
+  --ok:      #5AA36D; /* alias for legacy surfaces */
+
+  /* -------- SHAPE -------- */
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+
+  /* Shadows intentionally tint PPL purple (not neutral grey) — this
+     keeps elevated surfaces feeling part of the brand. */
+  --shadow-sm: 0 1px 2px rgba(73,14,111,.06), 0 2px 8px rgba(73,14,111,.04);
+  --shadow-md: 0 4px 14px rgba(73,14,111,.08), 0 10px 30px rgba(73,14,111,.06);
+  --shadow-lg: 0 20px 50px rgba(73,14,111,.14);
+
+  /* -------- MOTION -------- */
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur-fast: 150ms;
+  --dur-med:  280ms;
+  --dur-slow: 400ms;
+
+  /* -------- SPACING (4-pt scale) -------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  48px;
+  --space-9:  64px;
+
+  /* -------- TYPE FAMILIES -------- */
+  --font-body:    'Poppins', 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-display: 'Poppins', 'Inter', system-ui, sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* -------- TYPE SCALE (web) --------
+     From brand guide:
+       "For presentations, slide titles are 28 point, subheadings are
+        14 point and body text should be 12 point wherever possible…"
+     Web scale mirrors deck scale where it maps cleanly. */
+  --fs-display: clamp(42px, 5vw, 64px);
+  --fs-h1:      48px;
+  --fs-h2:      28px;
+  --fs-h3:      20px;
+  --fs-h4:      16px;
+  --fs-body:    15px;
+  --fs-body-sm: 13.5px;
+  --fs-caption: 12px;
+  --fs-eyebrow: 10px;
+
+  --lh-tight:   1.12; /* display / H1 */
+  --lh-snug:    1.20; /* H2 */
+  --lh-medium:  1.30; /* H3 */
+  --lh-body:    1.55; /* body — brand guide: "line spacing 1.12" for
+                         headings but body needs more air on web */
+  --lh-loose:   1.68; /* long-form reading */
+
+  --tracking-display: -0.02em;
+  --tracking-eyebrow: 0.16em;
+}
+
+/* =============================================================
+   BASE / RESET
+   ============================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* =============================================================
+   SEMANTIC TYPE CLASSES
+   Prefer these over raw font-size in components. Use .ppl-* so
+   they don't collide with app-specific resets.
+   ============================================================= */
+
+.ppl-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-display);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--ppl);
+}
+
+.ppl-h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0 0 var(--space-4);
+}
+
+.ppl-h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  color: var(--ink);
+  margin: 0 0 var(--space-3);
+}
+
+.ppl-h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-h3);
+  line-height: var(--lh-medium);
+  color: var(--ink);
+  margin: 0 0 var(--space-2);
+}
+
+.ppl-h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-h4);
+  line-height: 1.4;
+  color: var(--ink);
+  margin: 0 0 var(--space-2);
+}
+
+.ppl-body {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+}
+
+.ppl-body-lg {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.ppl-small {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.ppl-body-sm {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--fs-body-sm);
+  line-height: var(--lh-body);
+  color: var(--ink-2);
+}
+
+.ppl-caption {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--fs-caption);
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* Eyebrow / overline — heavy letter-spaced uppercase. Signature PPL
+   meta-label used for section headers inside sidebars and cards. */
+.ppl-eyebrow {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--fs-eyebrow);
+  line-height: 1;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ppl-mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* Emphasis — bold + purple. From the brand guide: Poppins Bold is
+   "used for headings, subheadings and sparingly to add visual
+   hierarchy or emphasis to certain words or phrases." */
+.ppl-em {
+  font-weight: 600;
+  color: var(--ppl);
+}
+
+/* Link */
+.ppl-link {
+  color: var(--ppl);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+  transition: color var(--dur-fast) var(--ease);
+}
+.ppl-link:hover { color: var(--ppl-deep); }
+
+/* =============================================================
+   UTILITY COLOUR / TEXT CLASSES
+   ============================================================= */
+.ppl-on-purple { color: #fff; }
+.ppl-on-purple .ppl-eyebrow { color: rgba(255,255,255,.65); }
+.ppl-on-purple .ppl-caption { color: rgba(255,255,255,.7); }

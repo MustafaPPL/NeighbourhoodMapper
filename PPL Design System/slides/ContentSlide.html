@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>PPL Content Slide · Three columns</title>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+html,body{margin:0;padding:0;background:#F6F2EB;height:100%;overflow:hidden}
+.stage{position:fixed;inset:0;display:grid;place-items:center;background:#F6F2EB}
+.slide{
+  width:1280px;height:720px;
+  background:var(--cream);
+  color:var(--ink);
+  position:relative;
+  overflow:hidden;
+  transform-origin:center center;
+  font-family:var(--font-body);
+}
+.bar{position:absolute;top:0;left:0;right:0;height:12px;background:var(--ppl)}
+.ppl-mark{position:absolute;top:40px;right:60px;width:62px;height:28px;background:url('../assets/ppl-logo.png') no-repeat right center/contain}
+.header{position:absolute;top:60px;left:60px;right:160px}
+.eye{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--ppl-mid);font-weight:600}
+.h1{font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--ink);margin:10px 0 0;line-height:1.15;letter-spacing:-.015em;max-width:1000px}
+.sub{margin-top:12px;font-size:15px;font-weight:500;color:var(--ink-2);max-width:900px;line-height:1.45}
+.cols{position:absolute;top:270px;left:60px;right:60px;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.col{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-lg);padding:28px 24px;box-shadow:var(--shadow-sm)}
+.col .num{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--ppl);color:#fff;font-family:var(--font-display);font-weight:700;font-size:20px;margin-bottom:16px}
+.col h3{font-family:var(--font-display);font-size:20px;font-weight:700;margin:0 0 8px;line-height:1.25;color:var(--ink)}
+.col p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.col .kpi{margin-top:16px;font-family:var(--font-display);font-size:32px;font-weight:700;color:var(--ppl);line-height:1;letter-spacing:-.02em}
+.col .kpi small{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;display:block;margin-top:4px;font-family:var(--font-body)}
+.footer{position:absolute;left:60px;bottom:22px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.pagenum{position:absolute;right:60px;bottom:22px;font-size:11px;color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="slide" id="slide">
+    <div class="bar"></div>
+    <div class="ppl-mark"></div>
+    <header class="header">
+      <div class="eye">Neighbourhood resilience · Findings</div>
+      <h1 class="h1">Three patterns emerged across the twelve localities we studied.</h1>
+      <div class="sub">Field research, March–May 2025. Each pattern is grounded in local-authority data and structured interviews.</div>
+    </header>
+    <div class="cols">
+      <div class="col">
+        <div class="num">1</div>
+        <h3>Anchored activity</h3>
+        <p>Neighbourhoods with a single trusted anchor — a community centre, GP surgery, library — see materially faster recovery of informal support networks after shocks.</p>
+        <div class="kpi">+34%<small>Faster recovery</small></div>
+      </div>
+      <div class="col">
+        <div class="num">2</div>
+        <h3>Shared data flows</h3>
+        <p>Where local authorities share case data with VCSE partners under a documented protocol, move-on pathways shorten and duplicate assessments fall.</p>
+        <div class="kpi">21 days<small>Average relet time</small></div>
+      </div>
+      <div class="col">
+        <div class="num">3</div>
+        <h3>Place-based commissioning</h3>
+        <p>Commissioning framed around a specific place — rather than a service line — correlates with higher resident satisfaction and lower repeat demand.</p>
+        <div class="kpi">£1.40<small>Value per £1 spent</small></div>
+      </div>
+    </div>
+    <div class="footer">B Corp · Social Enterprise UK · FT Leading Consultancy 2025</div>
+    <div class="pagenum">08 / 24</div>
+  </div>
+</div>
+<script>
+function fit(){
+  const s = document.getElementById('slide');
+  const k = Math.min(innerWidth/1280, innerHeight/720);
+  s.style.transform = `scale(${k})`;
+}
+addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

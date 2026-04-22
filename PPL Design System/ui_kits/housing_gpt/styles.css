@@ -1,0 +1,95 @@
+/* PPL HousingGPT UI Kit styles — layered on colors_and_type.css */
+
+body { font-family: var(--font-body); background: var(--cream); margin: 0; }
+
+.pk-app { display: grid; grid-template-columns: 272px 1fr; min-height: 100vh; }
+
+/* Sidebar */
+.pk-sidebar {
+  background: var(--ppl); color: #fff;
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 22px 18px 18px;
+  position: sticky; top: 0; min-height: 100vh;
+  overflow: hidden; z-index: 2;
+}
+.pk-sidebar::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 110px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 300' preserveAspectRatio='none'><path d='M0,0 L1000,0 L1000,140 C820,95 680,260 460,250 C280,242 140,150 0,210 Z' fill='%23D2C4DC'/><path d='M0,0 L1000,0 L1000,100 C820,55 680,220 460,210 C280,202 140,110 0,170 Z' fill='%23724CBF' opacity='.75'/></svg>") no-repeat center top/100% 100%;
+  pointer-events: none;
+}
+.pk-sidebar > * { position: relative; z-index: 1; }
+
+.pk-logomark { display: inline-flex; align-items: center; gap: 14px; margin-top: 92px; }
+.pk-ppl { width: 60px; height: 28px; background: url('../../assets/ppl-logo-white.png') no-repeat left center/contain; flex: none; }
+.pk-divider { width: 1px; height: 26px; background: rgba(255,255,255,.25); }
+.pk-product { display: flex; flex-direction: column; line-height: 1.15; }
+.pk-eyebrow { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.65); font-weight: 600; }
+.pk-name { font-size: 13.5px; font-weight: 600; color: #fff; }
+
+.pk-sidebar-label { font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.5); font-weight: 600; padding: 8px 0 4px; }
+
+.pk-sync-card {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--radius-md); padding: 12px 14px;
+}
+.pk-sync-eyebrow { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.55); font-weight: 600; }
+.pk-sync-status { margin: 4px 0 10px; font-size: 12px; color: rgba(255,255,255,.85); line-height: 1.4; }
+.pk-sync-meta { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.1); }
+.pk-sync-meta > div { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,.65); }
+.pk-sync-meta > div span:last-child { color: #fff; font-weight: 500; text-align: right; }
+
+.pk-sync-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 11px; background: var(--ppl-lilac); color: #fff;
+  border: 0; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.pk-sync-btn svg { width: 12px; height: 12px; }
+.pk-sync-btn.is-syncing svg { animation: pk-spin 1s linear infinite; }
+@keyframes pk-spin { to { transform: rotate(360deg); } }
+
+.pk-user-chip { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; }
+.pk-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.pk-user-name { font-size: 13px; font-weight: 600; color: #fff; }
+.pk-user-role { font-size: 11px; color: rgba(255,255,255,.6); }
+
+/* Main */
+.pk-main { display: flex; flex-direction: column; min-height: 100vh; }
+.pk-topbar { padding: 18px 28px; font-size: 13px; color: var(--muted); }
+.pk-stage { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 40px 28px; }
+
+.pk-hero { width: 100%; max-width: 780px; padding-top: 40px; text-align: center; }
+.pk-hero-mark { height: 36px; margin-bottom: 28px; background: url('../../assets/ppl-dot-arrow.jpg') no-repeat center/contain; opacity: .5; }
+.pk-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pk-chip {
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 14px 16px; font-size: 13.5px; font-family: inherit; text-align: left; cursor: pointer;
+  box-shadow: var(--shadow-sm); transition: all 150ms var(--ease); color: var(--ink);
+}
+.pk-chip:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: var(--ppl-tint-1); }
+
+/* Composer */
+.pk-composer-wrap { padding: 0 28px 24px; display: flex; justify-content: center; }
+.pk-composer { width: 100%; max-width: 780px; background: var(--paper); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 14px; }
+.pk-composer textarea { width: 100%; border: 0; outline: 0; resize: none; font-family: inherit; font-size: 14.5px; min-height: 28px; color: var(--ink); }
+.pk-composer textarea::placeholder { color: var(--muted); }
+.pk-composer-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.pk-composer-left { display: flex; gap: 6px; }
+.pk-composer-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.pk-mini { display: inline-flex; align-items: center; gap: 6px; background: var(--ppl-tint-3); color: var(--ppl); border: 0; font-size: 11.5px; padding: 6px 10px; border-radius: 999px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.pk-mini svg { width: 12px; height: 12px; }
+.pk-mini.pk-active { background: var(--ppl); color: #fff; }
+.pk-hint { font-size: 10.5px; color: var(--muted); }
+.pk-send { width: 34px; height: 34px; border-radius: 50%; background: var(--ppl); color: #fff; border: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.pk-send:disabled { opacity: .35; cursor: not-allowed; }
+.pk-send svg { width: 14px; height: 14px; }
+
+/* Messages */
+.pk-conv { width: 100%; max-width: 780px; display: flex; flex-direction: column; gap: 14px; }
+.pk-msg { display: flex; flex-direction: column; }
+.pk-msg-user { align-items: flex-end; }
+.pk-msg-user .pk-msg-body { background: var(--ppl-tint-3); color: var(--ink); border-radius: var(--radius-lg); border-bottom-right-radius: 6px; padding: 12px 14px; max-width: 80%; }
+.pk-msg-assistant .pk-msg-body { background: var(--paper); box-shadow: var(--shadow-md); border-radius: var(--radius-lg); border-bottom-left-radius: 6px; padding: 12px 14px; max-width: 88%; }
+.pk-cites { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.pk-cite { display: inline-flex; align-items: center; gap: 6px; background: var(--ppl-tint-2); color: var(--ppl); border-radius: 999px; padding: 4px 9px; font-size: 11px; font-weight: 600; }
+.pk-cite svg { width: 11px; height: 11px; }

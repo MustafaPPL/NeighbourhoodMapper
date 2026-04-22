@@ -1,0 +1,89 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font-body);
+  background:var(--ppl-deep);
+  padding:18px 22px;
+  min-height:150px;
+}
+.stage{display:flex;align-items:center;gap:20px}
+.motif{flex:none}
+.legend{color:#fff;line-height:1.45}
+.legend .eye{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--ppl-lilac);margin-bottom:6px}
+.legend .t{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;margin-bottom:4px}
+.legend .d{font-size:11.5px;color:rgba(255,255,255,.72);max-width:280px}
+</style></head><body>
+<div class="stage">
+  <!-- Dotted arrow motif: perfectly circular dots, uniform size, varied tints. -->
+  <svg class="motif" width="330" height="150" viewBox="0 0 330 150" aria-label="PPL dotted arrow motif" shape-rendering="geometricPrecision">
+    <g id="dots"></g>
+  </svg>
+  <div class="legend">
+    <div class="eye">Signature motif</div>
+    <div class="t">Dotted arrow</div>
+    <div class="d">Uniform circular dots tapering from a tall base to a single tip — forward motion, direction, progress. Used on banners, decks, and key art.</div>
+  </div>
+</div>
+<script>
+// Build a dotted arrow. Grid is column-major: each column is a vertical
+// stack of dots; the stack HEIGHT shrinks linearly from base → tip.
+// Dots are always perfect circles of uniform radius.
+const svg = document.querySelector('#dots');
+const NS = 'http://www.w3.org/2000/svg';
+
+const cols = 18;          // horizontal count
+const baseRows = 15;      // rows at the base (even → symmetric around centre)
+const r = 3.2;            // dot radius — constant
+const stepX = 9;          // horizontal pitch
+const stepY = 9;          // vertical pitch
+const cx0 = 16;           // left padding
+const cyMid = 75;         // vertical centre
+
+// Varied tint palette sampled from real motif
+const tints = [
+  '#C7B8E0', // light lilac
+  '#D2C4DC', // ppl-lilac
+  '#FFFFFF', // white highlight (rare)
+  '#9576FF', // mid
+  '#724CBF', // primary
+  '#4E2E93', // deep edge
+  '#A68BD6',
+  '#8A6BCC',
+];
+// Weighted: most dots mid-range, a few highlights
+const weighted = [
+  ...Array(3).fill('#C7B8E0'),
+  ...Array(4).fill('#D2C4DC'),
+  ...Array(4).fill('#9576FF'),
+  ...Array(3).fill('#A68BD6'),
+  ...Array(3).fill('#8A6BCC'),
+  ...Array(2).fill('#724CBF'),
+  ...Array(1).fill('#4E2E93'),
+  ...Array(1).fill('#FFFFFF'),
+];
+const pick = () => weighted[Math.floor(Math.random()*weighted.length)];
+
+// Seeded RNG so the pattern is stable across renders
+let seed = 42;
+function rnd(){ seed = (seed*9301 + 49297) % 233280; return seed/233280; }
+const pickSeeded = () => weighted[Math.floor(rnd()*weighted.length)];
+
+for(let c=0; c<cols; c++){
+  // rows for this column: shrink from baseRows at c=0 down to 1 at c=cols-1
+  const t = c / (cols-1);
+  const rowsThis = Math.max(1, Math.round(baseRows * (1 - t) + 1*t));
+  // Centre the column vertically around cyMid
+  const topY = cyMid - ((rowsThis-1)/2) * stepY;
+  const x = cx0 + c*stepX;
+  for(let row=0; row<rowsThis; row++){
+    const y = topY + row*stepY;
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('cx', x.toFixed(2));
+    circle.setAttribute('cy', y.toFixed(2));
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', pickSeeded());
+    svg.appendChild(circle);
+  }
+}
+</script>
+</body></html>

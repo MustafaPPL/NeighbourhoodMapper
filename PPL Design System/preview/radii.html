@@ -1,0 +1,20 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+body{margin:0;padding:18px;font-family:var(--font-body);background:var(--cream)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.b{background:var(--paper);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:108px}
+.b .sq{width:46px;height:46px;background:var(--ppl);opacity:.9}
+.t{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;font-weight:600}
+.v{font-family:ui-monospace,monospace;font-size:11px;color:var(--ink-2)}
+.r-xl .sq{border-radius:var(--radius-xl)}
+.r-lg .sq{border-radius:var(--radius-lg)}
+.r-md .sq{border-radius:var(--radius-md)}
+.r-sm .sq{border-radius:var(--radius-sm)}
+.r-pill .sq{border-radius:var(--radius-pill);width:80px;height:28px}
+</style></head><body>
+<div class="grid">
+  <div class="b r-xl"><div class="sq"></div><div class="t">XL</div><div class="v">24px</div></div>
+  <div class="b r-lg"><div class="sq"></div><div class="t">LG</div><div class="v">18px</div></div>
+  <div class="b r-md"><div class="sq"></div><div class="t">MD</div><div class="v">12px</div></div>
+  <div class="b r-sm"><div class="sq"></div><div class="t">SM</div><div class="v">8px</div></div>
+</div>
+</body></html>

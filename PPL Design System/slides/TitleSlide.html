@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>PPL Title Slide · Dotted chevrons</title>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+html,body{margin:0;padding:0;background:#490E6F;height:100%;overflow:hidden}
+.stage{position:fixed;inset:0;display:grid;place-items:center;background:#490E6F}
+.slide{
+  width:1280px;height:720px;
+  background:var(--ppl);
+  color:#fff;
+  position:relative;
+  overflow:hidden;
+  transform-origin:center center;
+  font-family:var(--font-body);
+}
+/* Dotted chevrons — 3 graduated chevrons bottom-right, per "State of Partnership" banner */
+.chev{position:absolute;bottom:48px;right:80px;display:flex;gap:32px}
+.chev .c{position:relative;width:120px;height:150px}
+.chev .c .dot{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--ppl-lilac)}
+.ppl-mark{position:absolute;top:44px;right:80px;font-family:var(--font-display);font-weight:800;font-size:48px;color:#fff;letter-spacing:-.02em;line-height:1}
+.content{position:absolute;top:110px;left:80px;right:80px}
+.title{font-family:var(--font-display);font-weight:800;font-size:120px;line-height:0.96;letter-spacing:-.03em;color:var(--ppl-lilac);margin:0;text-wrap:balance}
+.sub{margin-top:28px;font-size:30px;font-weight:500;color:#fff;line-height:1.25;max-width:820px}
+.footer{position:absolute;left:80px;bottom:38px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.6);font-weight:600}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="slide" id="slide">
+    <div class="ppl-mark">PPL</div>
+    <div class="content">
+      <h1 class="title">A state of<br/>partnership</h1>
+      <div class="sub">Neighbourhood resilience</div>
+    </div>
+    <div class="chev" id="chev"></div>
+    <div class="footer">B Corp · Social Enterprise UK · FT Leading Consultancy 2025</div>
+  </div>
+</div>
+<script>
+// Build three dotted chevrons (graduated opacity → right)
+const host = document.getElementById('chev');
+for (let n=0; n<3; n++){
+  const c = document.createElement('div'); c.className='c';
+  // 6 rows, opacity fades right; dot positions form > shape
+  const pattern = [
+    [1,0,0],
+    [1,1,0],
+    [1,1,1],
+    [1,1,0],
+    [1,0,0],
+  ];
+  pattern.forEach((row, r) => row.forEach((v, ci) => {
+    if(!v) return;
+    const d = document.createElement('div'); d.className='dot';
+    d.style.top = (r*30) + 'px';
+    d.style.left = (ci*24) + 'px';
+    d.style.opacity = 0.35 + 0.15*(ci+n*0.4);
+    c.appendChild(d);
+  }));
+  host.appendChild(c);
+}
+// Scale slide to fit viewport
+function fit(){
+  const s = document.getElementById('slide');
+  const sx = innerWidth/1280, sy = innerHeight/720;
+  const k = Math.min(sx, sy);
+  s.style.transform = `scale(${k})`;
+}
+addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

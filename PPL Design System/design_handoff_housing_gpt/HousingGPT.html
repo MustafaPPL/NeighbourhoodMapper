@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PPL Knowledge · Supported Housing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   PPL HOUSE STYLE — WEB APP SHOWCASE
+   Consolidated design rules (from brand guide + assets):
+
+   COLOURS
+     Primary       #490E6F  — most frequently used colour
+     Secondary     #350355 (deep), #724CBF (mid), #9576FF (bright lilac)
+     Tints         #D2C4DC, #EDE7F1, #F2EFFF
+     Gradients     purple→lilac; ONLY used inside waves
+     Text          #000 on light, #FFF on dark
+
+   TYPOGRAPHY
+     Family        Poppins (Bold for headings, Regular for body)
+     Line-height   1.12 display · 1.55 body
+     Scale (web)   display 48–64 / H2 28 / H3 20 / body 14–15 / caption 11–12
+
+   LOGO
+     Purple PPL on light backgrounds
+     White PPL on dark backgrounds
+     Always top-left (or top-right on co-brand lockups)
+
+   MOTIFS
+     1. Wave — liquid S-curve; scallop transitioning purple → lighter purple.
+        Used for section transitions and hero backgrounds.
+     2. Dotted chevron — graduated lilac dots forming rightward arrow.
+        Used for progression, "moving forward", active-state accents.
+     3. Organic blobs — soft layered purple shapes. Atmosphere only.
+
+   COMPOSITION
+     Deep purple hero panels with big Poppins Bold lavender headline
+     (lavender #9576FF-#A98CD1 against #490E6F). Credentials strip footer.
+   ========================================================= */
+
+:root{
+  /* Brand */
+  --ppl:#490E6F;         /* Primary */
+  --ppl-deep:#350355;    /* Secondary deep */
+  --ppl-mid:#724CBF;     /* Secondary mid */
+  --ppl-lilac:#9576FF;   /* Bright lilac — pops only */
+  --ppl-tint-1:#D2C4DC;
+  --ppl-tint-2:#EDE7F1;
+  --ppl-tint-3:#F2EFFF;
+  --ppl-wave-grad: linear-gradient(90deg, var(--ppl) 0%, var(--ppl-mid) 100%);
+
+  /* Neutrals */
+  --ink:#0d0517;
+  --ink-2:#3b2f48;
+  --muted:#6b6078;
+  --line:#eae3f0;
+  --line-strong:#d9cfe3;
+  --paper:#ffffff;
+  --cream:#faf6fd;
+
+  /* System */
+  --radius-xl:24px;
+  --radius-lg:18px;
+  --radius-md:12px;
+  --radius-sm:8px;
+  --shadow-sm: 0 1px 2px rgba(73,14,111,.06), 0 2px 8px rgba(73,14,111,.04);
+  --shadow-md: 0 4px 14px rgba(73,14,111,.08), 0 10px 30px rgba(73,14,111,.06);
+  --shadow-lg: 0 20px 50px rgba(73,14,111,.14);
+
+  --density: 1;
+  --wave-opacity: 1;
+}
+
+[data-theme="dark"]{
+  --ink:#f4eefa;
+  --ink-2:#d8cfe3;
+  --muted:#a193b5;
+  --line:#2a1640;
+  --line-strong:#3d2555;
+  --cream:#1a0829;
+  --paper:#210e34;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
+  --shadow-md: 0 4px 14px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.25);
+  --shadow-lg: 0 20px 50px rgba(0,0,0,.4);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{
+  font-family:'Poppins',system-ui,sans-serif;
+  color:var(--ink);
+  background:var(--cream);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.55;
+  overflow-x:hidden;
+}
+button,textarea,input{font:inherit;color:inherit}
+
+/* ============================================================
+   HERO BACKDROP — signature PPL wave
+   Replicates the PPT frontpiece liquid S-curve
+   ============================================================ */
+.hero-backdrop{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  overflow:hidden;opacity:var(--wave-opacity);
+  transition:opacity .4s ease;
+}
+.hero-backdrop svg{
+  position:absolute;inset:0;width:100%;height:100%;
+  preserveAspectRatio:none;
+}
+
+/* ============================================================
+   APP LAYOUT
+   ============================================================ */
+.app{
+  position:relative;z-index:1;
+  display:grid;
+  grid-template-columns: 272px minmax(0,1fr);
+  min-height:100vh;
+}
+[data-sidebar="off"] .app{grid-template-columns: 0 minmax(0,1fr)}
+[data-sidebar="off"] .sidebar{opacity:0;pointer-events:none;transform:translateX(-20px)}
+
+/* ============================================================
+   SIDEBAR — deep purple panel (per PPT frontpiece composition)
+   ============================================================ */
+.sidebar{
+  background:var(--ppl);
+  color:#fff;
+  display:flex;flex-direction:column;
+  padding: 22px 18px 18px;
+  gap:18px;
+  min-height:100vh;
+  position:sticky;top:0;
+  transition:all .3s ease;
+  overflow:hidden;
+  z-index:2;
+}
+/* Wave fixed to TOP of the sidebar.
+   Reconstructed from the PPL banner wave: asymmetric S-curve with two bands
+   (back band lighter lilac, front band darker lilac, slightly offset).
+   Rotated so the flat edge is at the TOP and the wave cuts downward. */
+.sidebar::before{
+  content:"";
+  position:absolute;
+  left:0;right:0;top:0;
+  height:110px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 300' preserveAspectRatio='none'><path d='M0,0 L1000,0 L1000,140 C820,95 680,260 460,250 C280,242 140,150 0,210 Z' fill='%23D2C4DC'/><path d='M0,0 L1000,0 L1000,100 C820,55 680,220 460,210 C280,202 140,110 0,170 Z' fill='%23724CBF' opacity='.75'/></svg>") no-repeat center top/100% 100%;
+  pointer-events:none;
+  z-index:0;
+}
+.sidebar > *{position:relative;z-index:1}
+.logomark{position:relative;z-index:2}
+
+.sidebar > *{position:relative;z-index:1}
+
+/* PPL logomark — per brand guide: solid block in purple/white */
+.logomark{
+  display:inline-flex;align-items:center;gap:14px;
+  padding:2px 0 0;
+}
+.logomark .ppl{
+  display:inline-block;
+  width:60px;height:28px;
+  background: url('assets/ppl-logo-white.png') no-repeat left center;
+  background-size: contain;
+  flex:none;
+}
+.logomark .divider{
+  width:1px;height:26px;background:rgba(255,255,255,.25);
+}
+.logomark .product{
+  display:flex;flex-direction:column;gap:1px;line-height:1.15;
+}
+.logomark .product .eyebrow{
+  font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(255,255,255,.65);font-weight:600;
+}
+.logomark .product .name{
+  font-size:13.5px;font-weight:600;color:#fff;
+}
+
+/* Workspace card on the purple — keeps its own luminosity */
+.workspace-card{
+  margin-top:2px;
+  padding: 16px;
+  background: rgba(255,255,255,.08);
+  backdrop-filter: blur(6px);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:var(--radius-lg);
+  color:#fff;
+}
+.workspace-card .kicker{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ppl-lilac);font-weight:700;
+}
+.workspace-card .kicker::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+  background:var(--ppl-lilac);
+  box-shadow:0 0 0 3px rgba(149,118,255,.2);
+}
+.workspace-card h3{
+  margin:8px 0 6px;
+  font-size:15.5px;font-weight:700;
+  letter-spacing:-0.015em;line-height:1.22;
+}
+.workspace-card p{
+  margin:0;
+  color:rgba(255,255,255,.7);
+  font-size:12.5px;line-height:1.5;
+}
+
+.sidebar-section-label{
+  font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);font-weight:600;
+  padding: 8px 8px 4px;
+}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 11px;
+  background:transparent;border:0;border-radius:10px;
+  text-align:left;cursor:pointer;
+  color:rgba(255,255,255,.78);
+  font-size:13.5px;font-weight:500;
+  transition:background .15s ease, color .15s ease;
+}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{
+  background:#fff;
+  color:var(--ppl);font-weight:600;
+  box-shadow: 0 2px 10px rgba(0,0,0,.1);
+}
+.nav-item svg{width:17px;height:17px;flex:none}
+.nav-item .count{
+  margin-left:auto;font-size:10.5px;
+  padding:2px 7px;border-radius:999px;font-weight:600;
+  background:rgba(255,255,255,.15);color:rgba(255,255,255,.7);
+}
+.nav-item.active .count{background:var(--ppl-tint-3);color:var(--ppl)}
+.nav-dot{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+.nav-item.active .nav-dot{box-shadow:0 0 0 3px rgba(73,14,111,.08)}
+.nav-item.new-chat{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  color:#fff;font-weight:600;
+  margin-bottom:14px;
+}
+.nav-item.new-chat:hover{background:rgba(255,255,255,.14)}
+.nav-item.new-chat svg{width:14px;height:14px}
+.nav-item.new-chat .count{
+  margin-left:auto;background:rgba(0,0,0,.18);
+  color:rgba(255,255,255,.75);font-size:10px;
+  letter-spacing:.04em;
+}
+.side-nav{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+
+.chat-history{display:flex;flex-direction:column;gap:1px}
+.history-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 11px;
+  font-size:12.5px;color:rgba(255,255,255,.6);
+  text-decoration:none;border-radius:8px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease;
+}
+.history-item::before{
+  content:"";width:4px;height:4px;border-radius:50%;flex:none;
+  background:rgba(255,255,255,.3);
+}
+.history-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9)}
+.history-item.current{color:#fff}
+.history-item.current::before{background:var(--ppl-lilac);box-shadow:0 0 8px var(--ppl-lilac)}
+
+.sidebar-footer{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.sync-panel{display:flex;flex-direction:column;gap:6px}
+.sync-meta{display:flex;flex-direction:column;gap:6px;margin:6px 0 10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}
+.sync-meta-row{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.65)}
+.sync-meta-row span:last-child{color:#fff;font-weight:500;text-align:right}
+.sync-card{
+  padding:12px 14px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--radius-md);
+  position:relative;overflow:hidden;
+}
+.sync-card .sync-label{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:600}
+.sync-card .sync-status{margin:4px 0 10px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.4}
+.sync-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:7px 11px;
+  background:var(--ppl-lilac);color:#fff;
+  border:0;border-radius:999px;
+  font-size:11.5px;font-weight:600;cursor:pointer;
+  transition:transform .15s ease, background .15s ease;
+}
+.sync-btn:hover{transform:translateY(-1px);background:#a085ff}
+.sync-btn svg{width:12px;height:12px}
+.sync-btn.is-syncing svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.user-chip{
+  display:flex;align-items:center;gap:10px;
+  padding:8px;border-radius:10px;
+  cursor:pointer;
+  transition:background .15s ease;
+}
+.user-chip:hover{background:rgba(255,255,255,.06)}
+.avatar{
+  width:30px;height:30px;flex:none;
+  border-radius:50%;
+  background:var(--ppl-lilac);
+  display:grid;place-items:center;
+  color:#fff;font-weight:700;font-size:11px;
+}
+.user-chip .name{font-size:12.5px;font-weight:600;color:#fff}
+.user-chip .role{font-size:10.5px;color:rgba(255,255,255,.55)}
+
+/* ============================================================
+   MAIN AREA
+   ============================================================ */
+.main{
+  display:flex;flex-direction:column;
+  min-height:100vh;
+  background:var(--cream);
+  position:relative;
+}
+
+/* Wave transition from sidebar (purple) to main (cream) — along the left edge of main.
+   Purely decorative; sits in the negative space. */
+.edge-wave{
+  position:absolute;left:-1px;top:0;height:100vh;width:40px;
+  pointer-events:none;z-index:2;
+}
+
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding: 18px 32px;
+  gap:16px;
+  border-bottom:1px solid var(--line);
+  background:var(--cream);
+  position:relative;z-index:2;
+}
+.crumbs{
+  display:flex;align-items:center;gap:10px;
+  color:var(--muted);font-size:13px;
+}
+.crumbs .sep{opacity:.5}
+.crumbs .here{color:var(--ink-2);font-weight:500}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding: 6px 12px;
+  background:var(--paper);border:1px solid var(--line);
+  border-radius:999px;
+  font-size:11.5px;color:var(--ink-2);font-weight:500;
+}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:#5aa36d;box-shadow:0 0 0 3px color-mix(in oklch, #5aa36d 25%, transparent)}
+.icon-btn{
+  width:34px;height:34px;display:grid;place-items:center;
+  background:var(--paper);border:1px solid var(--line);border-radius:10px;
+  cursor:pointer;color:var(--ink-2);
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.icon-btn:hover{border-color:var(--line-strong);box-shadow:var(--shadow-sm)}
+.icon-btn svg{width:16px;height:16px}
+
+/* ============================================================
+   STAGE
+   ============================================================ */
+.stage{
+  flex:1;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding: 0 32px;
+  min-height:0;
+  position:relative;
+}
+
+/* ChatGPT-style centered empty state */
+.hero{
+  width:100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;
+  gap: 28px;
+  padding-bottom: 180px; /* leave room for fixed composer */
+}
+
+.hero-mark{
+  width:72px;height:32px;
+  background: url('assets/ppl-logo.png') no-repeat center;
+  background-size: contain;
+}
+[data-theme="dark"] .hero-mark{
+  background-image: url('assets/ppl-logo-white.png');
+}
+
+.hero h1{
+  margin: 0;
+  font-family:'Poppins',sans-serif;
+  font-weight:600;
+  font-size: clamp(26px, 3.4vw, 34px);
+  line-height:1.15;letter-spacing:-0.02em;
+  color:var(--ink);
+  text-wrap:balance;
+}
+
+.prompt-chips{
+  display:flex;flex-wrap:wrap;justify-content:center;
+  gap:8px;max-width:640px;
+  margin-top: 4px;
+}
+.chip{
+  padding: 9px 14px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:999px;
+  font-size:13px;font-weight:500;
+  color:var(--ink-2);
+  cursor:pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease, transform .15s ease;
+}
+.chip:hover{
+  border-color:var(--ppl-tint-1);
+  color:var(--ppl);
+  transform:translateY(-1px);
+}
+[data-theme="dark"] .chip:hover{color:var(--ppl-lilac);border-color:var(--ppl-mid)}
+
+/* ============================================================
+   CONVERSATION
+   ============================================================ */
+.conversation{
+  flex:1;
+  max-width:820px;width:100%;
+  margin: 0 auto;
+  padding: 24px 0 24px;
+  display:flex;flex-direction:column;gap:22px;
+  overflow-y:auto;
+  scroll-behavior:smooth;
+}
+.msg{
+  display:flex;gap:14px;
+  animation: msgIn .35s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes msgIn{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.msg .bubble-wrap{flex:1;min-width:0}
+.msg .who{
+  display:flex;align-items:center;gap:8px;
+  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin-bottom:8px;
+}
+.msg .who .who-mark{
+  width:18px;height:18px;display:grid;place-items:center;
+  border-radius:4px;font-size:8.5px;font-weight:800;
+}
+.msg.assistant .who-mark{background:var(--ppl);color:#fff}
+.msg.user .who-mark{background:var(--ink);color:#fff;border-radius:999px}
+.msg .who .meta{color:var(--muted);letter-spacing:0;text-transform:none;font-weight:500}
+
+.msg .body{
+  font-size:15px;line-height:1.68;color:var(--ink);
+  white-space:pre-wrap;
+}
+.msg.user .body{
+  display:inline-block;
+  background:var(--ppl);
+  color:#fff;
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 16px;
+}
+.body strong{font-weight:600;color:var(--ink)}
+.msg.user .body strong{color:#fff}
+
+.body .cite{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;
+  font-size:10.5px;font-weight:700;
+  background:var(--ppl-tint-3);
+  color:var(--ppl);
+  border-radius:6px;
+  margin-left:2px;
+  vertical-align:1px;
+  cursor:pointer;
+  transition:background .15s ease;
+}
+[data-theme="dark"] .body .cite{color:var(--ppl-lilac);background:rgba(149,118,255,.18)}
+.body .cite:hover{background:var(--ppl);color:#fff}
+
+.sources-block{
+  margin-top:14px;
+  padding:14px 16px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius-md);
+}
+.sources-block .s-head{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;
+  margin-bottom:10px;
+}
+.sources-block .count-pill{
+  padding:2px 8px;background:var(--ppl-tint-3);
+  color:var(--ppl);border-radius:999px;font-size:10px;letter-spacing:.04em;
+}
+[data-theme="dark"] .sources-block .count-pill{color:var(--ppl-lilac);background:rgba(149,118,255,.18)}
+.sources-list{display:flex;flex-direction:column;gap:6px}
+.source-row{
+  display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;
+  align-items:center;
+  padding:8px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:background .15s ease;
+}
+.source-row:hover{background:var(--ppl-tint-3)}
+[data-theme="dark"] .source-row:hover{background:rgba(149,118,255,.1)}
+.source-row .f{
+  width:22px;height:26px;border-radius:4px;
+  display:grid;place-items:center;color:#fff;
+  font-size:8px;font-weight:800;
+}
+.source-row .f.pdf{background:#c04a3f}
+.source-row .f.doc{background:#3f6fc0}
+.source-row .f.xls{background:#3fa060}
+.source-row .f.ppt{background:#c06a3f}
+.source-row .s-title{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.source-row .s-chunks{font-size:11px;color:var(--muted)}
+.source-row .s-score{
+  font-size:10px;font-weight:700;
+  padding:3px 7px;border-radius:6px;
+  background:var(--ppl-tint-3);
+  color:var(--ppl);
+}
+[data-theme="dark"] .source-row .s-score{color:var(--ppl-lilac);background:rgba(149,118,255,.18)}
+
+/* Typing — uses dotted-chevron motif as loader */
+.typing{
+  display:inline-flex;align-items:center;gap:12px;
+  padding:11px 14px;
+  background:var(--paper);border:1px solid var(--line);
+  border-radius:16px 16px 16px 4px;
+  color:var(--muted);font-size:12.5px;
+}
+.typing .loader-dots{display:inline-flex;gap:4px}
+.typing .loader-dots span{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--ppl-mid);
+  animation: pplPulse 1.2s infinite ease-in-out;
+}
+.typing .loader-dots span:nth-child(2){animation-delay:.15s;background:var(--ppl-lilac)}
+.typing .loader-dots span:nth-child(3){animation-delay:.3s;background:var(--ppl-lilac)}
+@keyframes pplPulse{
+  0%,80%,100%{transform:scale(.6);opacity:.4}
+  40%{transform:scale(1);opacity:1}
+}
+
+/* ============================================================
+   COMPOSER
+   ============================================================ */
+.composer-wrap{
+  position:fixed;
+  left: 272px;right: 0;bottom: 38px;
+  padding: 16px 32px 14px;
+  background: linear-gradient(180deg, transparent, var(--cream) 40%);
+  z-index:3;
+  pointer-events:none;
+}
+[data-sidebar="off"] .composer-wrap{left:0}
+.composer-wrap > *{pointer-events:auto}
+.composer{
+  max-width:760px;margin:0 auto;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-md);
+  padding: 10px 10px 10px 18px;
+  display:grid;gap:6px;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.composer:focus-within{
+  border-color:var(--ppl-mid);
+  box-shadow: 0 0 0 4px rgba(114,76,191,.15), var(--shadow-md);
+}
+.composer textarea{
+  width:100%;
+  border:0;outline:0;resize:none;
+  background:transparent;
+  font-size:15px;line-height:1.55;
+  padding:8px 0 2px;
+  min-height:40px;max-height:180px;
+}
+.composer textarea::placeholder{color:var(--muted)}
+.composer-row{display:flex;align-items:center;gap:8px}
+.composer-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mini-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;
+  background:transparent;border:1px solid var(--line);
+  border-radius:999px;
+  font-size:11.5px;color:var(--muted);font-weight:500;
+  cursor:pointer;
+  transition:border-color .15s ease, color .15s ease, background .15s ease;
+}
+.mini-btn:hover{border-color:var(--line-strong);color:var(--ink-2)}
+.mini-btn.active{
+  background:var(--ppl-tint-3);
+  border-color:transparent;color:var(--ppl);
+}
+[data-theme="dark"] .mini-btn.active{color:var(--ppl-lilac);background:rgba(149,118,255,.15)}
+.mini-btn svg{width:13px;height:13px}
+
+.composer-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.char-hint{font-size:11px;color:var(--muted)}
+.send{
+  width:36px;height:36px;
+  background: var(--ppl);color:#fff;
+  border:0;border-radius:50%;
+  cursor:pointer;
+  display:grid;place-items:center;
+  transition:transform .15s ease, background .15s ease, opacity .15s ease;
+}
+.send:hover{background:var(--ppl-deep);transform:translateY(-1px)}
+.send:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.send svg{width:15px;height:15px}
+
+.disclaimer{
+  max-width:760px;margin: 10px auto 0;
+  text-align:center;font-size:11.5px;color:var(--muted);
+}
+.credentials-strip{
+  position:fixed;left:272px;right:0;bottom:0;
+  z-index:2;
+  padding: 8px 32px;
+  background: var(--cream);
+  border-top: 1px solid var(--line);
+  text-align:center;
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;
+  color:var(--muted);
+}
+[data-sidebar="off"] .credentials-strip{left:0}
+
+/* ============================================================
+   TWEAKS PANEL
+   ============================================================ */
+.tweaks{
+  position:fixed;bottom:22px;right:22px;z-index:50;
+  width:280px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg);
+  padding:16px;
+  display:none;
+}
+.tweaks[data-open="true"]{display:block}
+.tweaks h4{
+  margin:0 0 12px;
+  font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.tweaks h4 button{
+  background:transparent;border:0;cursor:pointer;color:var(--muted);
+  width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+  font-size:18px;line-height:1;
+}
+.tweaks h4 button:hover{background:var(--line)}
+.tw-row{
+  display:flex;flex-direction:column;gap:6px;
+  padding:8px 0;border-top:1px dashed var(--line);
+}
+.tw-row:first-of-type{border-top:0}
+.tw-row label{font-size:10.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.tw-segments{display:flex;gap:4px;background:var(--cream);padding:3px;border-radius:10px}
+.tw-seg{
+  flex:1;padding:6px 8px;background:transparent;border:0;
+  border-radius:7px;cursor:pointer;
+  font-size:12px;color:var(--muted);font-weight:500;
+  transition:background .15s ease, color .15s ease;
+}
+.tw-seg.active{background:var(--paper);color:var(--ink);box-shadow:var(--shadow-sm)}
+[data-theme="dark"] .tw-seg.active{background:var(--ppl)}
+.tw-slider{width:100%;accent-color:var(--ppl)}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 960px){
+  .app{grid-template-columns: 1fr}
+  .sidebar{display:none}
+  .topbar{padding: 14px 18px}
+  .stage{padding: 0 18px}
+  .composer-wrap{left:0;padding:16px 18px 14px}
+  .credentials-strip{left:0;padding:8px 18px}
+}
+
+.hidden{display:none !important}
+.fade-out{animation: fadeOut .3s forwards}
+@keyframes fadeOut{to{opacity:0;transform:translateY(-8px)}}
+</style>
+</head>
+<body data-theme="light" data-sidebar="on">
+
+<div class="app">
+
+  <!-- ========== SIDEBAR (deep purple, per PPT frontpiece) ========== -->
+  <aside class="sidebar">
+    <div class="logomark" style="margin-top:92px">
+      <div class="ppl" role="img" aria-label="PPL"></div>
+      <div class="divider"></div>
+      <div class="product">
+        <span class="eyebrow">Knowledge</span>
+        <span class="name">Supported Housing</span>
+      </div>
+    </div>
+
+    <div class="sync-panel">
+      <div class="sidebar-section-label" style="padding-left:0">SharePoint sync</div>
+      <div class="sync-card">
+        <div class="sync-label">Status</div>
+        <div class="sync-status" id="syncStatus">Last synced 12 min ago · 2,418 files</div>
+        <div class="sync-meta">
+          <div class="sync-meta-row"><span>Source</span><span>/Supported Housing</span></div>
+          <div class="sync-meta-row"><span>Model</span><span>gpt-5-mini</span></div>
+          <div class="sync-meta-row"><span>Embeddings</span><span>text-embedding-3-large</span></div>
+        </div>
+        <button class="sync-btn" id="syncBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9"/><path d="M3 12a9 9 0 0 1 9-9"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/></svg>
+          Sync now
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="avatar">MH</div>
+        <div>
+          <div class="name">Mustafa Hussain</div>
+          <div class="role">Housing Team · PPL</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN ========== -->
+  <main class="main">
+
+    <!-- Decorative wave bridge (sidebar → main) -->
+    <svg class="edge-wave" viewBox="0 0 40 1000" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,0 C30,200 10,400 25,600 C40,800 15,900 0,1000 L0,0 Z" fill="var(--ppl)" opacity=".0"/>
+    </svg>
+
+    <div class="topbar">
+      <div class="crumbs">
+        <span class="here">Supported Housing</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="tweaksBtn" title="Tweaks" aria-label="Tweaks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <section class="stage" id="stage">
+      <div class="hero" id="hero">
+        <div class="hero-mark" aria-hidden="true"></div>
+        <div class="prompt-chips">
+          <button class="chip" data-q="What does the voids recovery policy say about target relet times for supported housing schemes?">Voids recovery — relet targets</button>
+          <button class="chip" data-q="Summarise the duty to refer obligations under the Homelessness Reduction Act for commissioned supported housing.">Duty to refer under HRA</button>
+          <button class="chip" data-q="Which service charges are eligible for Housing Benefit in exempt accommodation, and what risks are flagged in our internal notes?">Eligible service charges</button>
+          <button class="chip" data-q="What patterns have we seen in the Salford, Islington and Bury move-on pathway evaluations?">Move-on pathway patterns</button>
+        </div>
+      </div>
+
+      <div class="conversation hidden" id="conversation"></div>
+    </section>
+
+    <div class="composer-wrap">
+      <form class="composer" id="composer" autocomplete="off">
+        <textarea id="q" rows="1" placeholder="Ask about policy, procedure, competitor insight or operational guidance…"></textarea>
+        <div class="composer-row">
+          <div class="composer-left">
+            <button type="button" class="mini-btn" title="Attach">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              Attach
+            </button>
+            <button type="button" class="mini-btn active" title="Scope">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+              Supported Housing
+            </button>
+          </div>
+          <div class="composer-right">
+            <span class="char-hint" id="hint">Enter to send</span>
+            <button type="submit" class="send" id="send" aria-label="Send" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </form>
+      <p class="disclaimer">Answers are grounded in approved material. Always verify citations.</p>
+    </div>
+    <div class="credentials-strip">B Corp · Social Enterprise UK · FT Leading Consultancy 2025</div>
+  </main>
+</div>
+
+<!-- ========== TWEAKS ========== -->
+<div class="tweaks" id="tweaksPanel">
+  <h4>Tweaks <button id="closeTweaks" aria-label="Close">×</button></h4>
+  <div class="tw-row">
+    <label>Theme</label>
+    <div class="tw-segments" data-tweak="theme">
+      <button class="tw-seg active" data-val="light">Light</button>
+      <button class="tw-seg" data-val="dark">Dark</button>
+    </div>
+  </div>
+  <div class="tw-row">
+    <label>Density</label>
+    <div class="tw-segments" data-tweak="density">
+      <button class="tw-seg" data-val=".85">Compact</button>
+      <button class="tw-seg active" data-val="1">Comfortable</button>
+      <button class="tw-seg" data-val="1.15">Spacious</button>
+    </div>
+  </div>
+  <div class="tw-row">
+    <label>Sidebar</label>
+    <div class="tw-segments" data-tweak="sidebar">
+      <button class="tw-seg active" data-val="on">On</button>
+      <button class="tw-seg" data-val="off">Off</button>
+    </div>
+  </div>
+  <div class="tw-row">
+    <label>Wave / motif intensity</label>
+    <input type="range" class="tw-slider" id="waveSlider" min="0" max="1.2" step="0.05" value="1" />
+  </div>
+</div>
+
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "density": 1,
+  "sidebar": "on",
+  "waveIntensity": 1
+}/*EDITMODE-END*/;
+</script>
+
+<script>
+(() => {
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+  const hero = $('#hero');
+  const conversation = $('#conversation');
+  const composer = $('#composer');
+  const q = $('#q');
+  const send = $('#send');
+  const hint = $('#hint');
+  const syncBtn = $('#syncBtn');
+  const syncStatus = $('#syncStatus');
+
+  function autoGrow(){
+    q.style.height='auto';
+    q.style.height = Math.min(q.scrollHeight, 180) + 'px';
+    send.disabled = q.value.trim().length === 0;
+  }
+  q.addEventListener('input', autoGrow);
+  q.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      if (!send.disabled) composer.requestSubmit();
+    }
+  });
+
+  $$('.suggestion').forEach(btn => {
+    btn.addEventListener('click', () => {
+      q.value = btn.dataset.q || '';
+      autoGrow();
+      q.focus();
+    });
+  });
+
+  composer.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = q.value.trim();
+    if (!text) return;
+    sendMessage(text);
+    q.value='';
+    autoGrow();
+  });
+
+  function sendMessage(text){
+    if (!hero.classList.contains('hidden')){
+      hero.classList.add('fade-out');
+      setTimeout(() => {
+        hero.classList.add('hidden');
+        hero.classList.remove('fade-out');
+        conversation.classList.remove('hidden');
+      }, 280);
+    }
+    appendUser(text);
+    appendTyping();
+    hint.textContent = 'Querying index…';
+    setTimeout(() => {
+      removeTyping();
+      appendAssistant(buildAnswer(text));
+      hint.textContent = 'Enter to send';
+    }, 1400 + Math.random()*600);
+  }
+
+  function appendUser(text){
+    const msg = document.createElement('div');
+    msg.className = 'msg user';
+    msg.innerHTML = `
+      <div class="bubble-wrap">
+        <div class="who"><span class="who-mark">MH</span> You</div>
+        <div class="body"></div>
+      </div>`;
+    msg.querySelector('.body').textContent = text;
+    conversation.appendChild(msg);
+    conversation.scrollTop = conversation.scrollHeight;
+  }
+
+  let typingEl = null;
+  function appendTyping(){
+    typingEl = document.createElement('div');
+    typingEl.className = 'msg assistant';
+    typingEl.innerHTML = `
+      <div class="bubble-wrap">
+        <div class="who"><span class="who-mark">PPL</span> Knowledge</div>
+        <div class="typing">
+          <span class="loader-dots"><span></span><span></span><span></span></span>
+          <span>Searching the library…</span>
+        </div>
+      </div>`;
+    conversation.appendChild(typingEl);
+    conversation.scrollTop = conversation.scrollHeight;
+  }
+  function removeTyping(){ if(typingEl){ typingEl.remove(); typingEl = null; } }
+
+  function appendAssistant({body, sources}){
+    const msg = document.createElement('div');
+    msg.className = 'msg assistant';
+    const src = sources.map((s) => `
+      <div class="source-row">
+        <div class="f ${s.type}">${s.type.toUpperCase()}</div>
+        <div class="s-title">${s.title}</div>
+        <div class="s-chunks">chunks ${s.chunks.join(', ')}</div>
+        <div class="s-score">${s.score}</div>
+      </div>`).join('');
+    msg.innerHTML = `
+      <div class="bubble-wrap">
+        <div class="who"><span class="who-mark">PPL</span> Knowledge <span class="meta">· grounded answer</span></div>
+        <div class="body">${body}</div>
+        <div class="sources-block">
+          <div class="s-head">
+            <span>Sources</span>
+            <span class="count-pill">${sources.length} cited</span>
+          </div>
+          <div class="sources-list">${src}</div>
+        </div>
+      </div>`;
+    conversation.appendChild(msg);
+    conversation.scrollTop = conversation.scrollHeight;
+  }
+
+  function buildAnswer(){
+    const body = `Across the current PPL index, the <strong>2024 Voids Recovery Policy</strong><span class="cite">1</span> sets a target relet time for supported housing schemes of <strong>21 calendar days</strong> from keys-returned to new tenant sign-up — five days tighter than the general-needs benchmark. Three operational caveats apply:
+
+• Schemes with commissioned support contracts follow the joint <em>void-to-move-on</em> clock in the Supporting People partnership agreement<span class="cite">2</span>, which starts the day a referral is accepted, not the day the property is vacated.
+• Category 2 supported housing is exempted from the national 21-day standard where the Local Authority is the direct referrer<span class="cite">3</span>.
+• The Q3 KPI pack<span class="cite">4</span> reports an actual YTD average of <strong>27.4 days</strong>, driven by delayed referral-matching in SEL schemes.
+
+If useful I can pull the clause text, the 8-quarter KPI trend, or the March remediation actions.`;
+    const sources = [
+      { type:'pdf', title:'Voids Recovery Policy 2024 (signed).pdf', chunks:[4,9,11], score:'0.91' },
+      { type:'doc', title:'Supporting People Partnership Agreement — SEL.docx', chunks:[22,23], score:'0.84' },
+      { type:'pdf', title:'Category 2 Supported Housing — Commissioner Guidance.pdf', chunks:[7], score:'0.78' },
+      { type:'xls', title:'Operations KPI pack — Q3 2025.xlsx', chunks:[3,5,6], score:'0.72' }
+    ];
+    return { body, sources };
+  }
+
+  syncBtn.addEventListener('click', () => {
+    if (syncBtn.classList.contains('is-syncing')) return;
+    syncBtn.classList.add('is-syncing');
+    let pct = 0;
+    const int = setInterval(() => {
+      pct += Math.random()*12 + 6;
+      if (pct >= 100){ pct = 100; clearInterval(int); finish(); }
+      syncStatus.textContent = `Syncing… ${Math.floor(pct)}% · reading SharePoint`;
+    }, 220);
+    function finish(){
+      setTimeout(() => {
+        syncBtn.classList.remove('is-syncing');
+        syncStatus.textContent = 'Last synced just now · 2,431 files';
+      }, 300);
+    }
+  });
+
+  const tweaksPanel = $('#tweaksPanel');
+  $('#tweaksBtn').addEventListener('click', () => {
+    tweaksPanel.dataset.open = tweaksPanel.dataset.open === 'true' ? 'false' : 'true';
+  });
+  $('#closeTweaks').addEventListener('click', () => { tweaksPanel.dataset.open = 'false'; });
+
+  $$('.tw-segments').forEach(group => {
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tw-seg'); if (!btn) return;
+      group.querySelectorAll('.tw-seg').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      applyTweak(group.dataset.tweak, btn.dataset.val);
+    });
+  });
+  $('#waveSlider').addEventListener('input', (e) => {
+    document.documentElement.style.setProperty('--wave-opacity', e.target.value);
+    persist({waveIntensity: parseFloat(e.target.value)});
+  });
+
+  function applyTweak(key, val){
+    if (key === 'theme') { document.body.dataset.theme = val; persist({theme: val}); }
+    if (key === 'density'){ document.documentElement.style.setProperty('--density', val); persist({density: parseFloat(val)}); }
+    if (key === 'sidebar'){ document.body.dataset.sidebar = val; persist({sidebar: val}); }
+  }
+  function persist(edits){
+    try { window.parent?.postMessage({type:'__edit_mode_set_keys', edits}, '*'); } catch(e){}
+    localStorage.setItem('ppl-tweaks', JSON.stringify({...readLocal(), ...edits}));
+  }
+  function readLocal(){ try { return JSON.parse(localStorage.getItem('ppl-tweaks')) || {}; } catch(e){ return {}; } }
+
+  (() => {
+    const saved = {...TWEAK_DEFAULTS, ...readLocal()};
+    if (saved.theme) document.body.dataset.theme = saved.theme;
+    if (saved.density) document.documentElement.style.setProperty('--density', saved.density);
+    if (saved.sidebar) document.body.dataset.sidebar = saved.sidebar;
+    if (saved.waveIntensity !== undefined) {
+      document.documentElement.style.setProperty('--wave-opacity', saved.waveIntensity);
+      $('#waveSlider').value = saved.waveIntensity;
+    }
+    $$('.tw-segments').forEach(group => {
+      const k = group.dataset.tweak;
+      const val = String(saved[k] ?? '');
+      group.querySelectorAll('.tw-seg').forEach(s => {
+        s.classList.toggle('active', s.dataset.val === val);
+      });
+    });
+  })();
+
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.type === '__activate_edit_mode') tweaksPanel.dataset.open = 'true';
+    if (e.data.type === '__deactivate_edit_mode') tweaksPanel.dataset.open = 'false';
+  });
+  try { window.parent?.postMessage({type:'__edit_mode_available'}, '*'); } catch(e){}
+
+  autoGrow();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font-body);
+  background:var(--cream);
+  padding:16px 18px;
+  min-height:180px;
+  display:flex;
+  align-items:center;
+  gap:22px;
+}
+.illo{flex:none}
+.legend{line-height:1.5}
+.legend .eye{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--ppl-mid);margin-bottom:6px}
+.legend .t{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--ink);margin-bottom:4px}
+.legend .d{font-size:11.5px;color:var(--ink-2);max-width:280px}
+</style></head><body>
+<svg class="illo" width="170" height="160" viewBox="0 0 170 160" aria-label="Lightbulb illustration example">
+  <!-- Continuous horizontal line that runs THROUGH the blob (part of the style) -->
+  <path d="M0,80 Q40,100 85,80 T170,80" fill="none" stroke="#2A1758" stroke-width="1.2"/>
+  <!-- Organic purple blob, centred at (85, 80) -->
+  <path d="M85,6
+           C124,6 160,28 160,72
+           C160,114 130,140 86,140
+           C42,140 10,118 10,74
+           C10,32 46,6 85,6 Z"
+        fill="#2A1758"/>
+  <!-- Lightbulb — bulb+base span y=28..124, vertical centre 76 ≈ blob centre 73 -->
+  <g stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="#BFA8E0">
+    <!-- Bulb body — rounded pear shape, centred horizontally at x=85 -->
+    <path d="M85 28
+             C64 28 50 44 50 62
+             C50 74 57 82 64 90
+             C68 94 70 98 70 104
+             L100 104
+             C100 98 102 94 106 90
+             C113 82 120 74 120 62
+             C120 44 106 28 85 28 Z"/>
+    <!-- Filament squiggle inside -->
+    <path d="M74 56 C80 50 90 50 96 56 C98 58 96 64 92 66 C86 70 82 74 85 82"
+          fill="none" stroke="#FFFFFF" stroke-width="3.5"/>
+    <!-- Base threads — 3 stacked pills, centred at x=85 -->
+    <path d="M70 108 L100 108" stroke-width="4.5"/>
+    <path d="M72 116 L98 116" stroke-width="4.5"/>
+    <path d="M76 124 L94 124" stroke-width="4.5"/>
+  </g>
+</svg>
+<div class="legend">
+  <div class="eye">Brand illustrations</div>
+  <div class="t">Chunky line art on purple blob</div>
+  <div class="d">Continuous-line subjects filled with lilac, outlined in white, placed on a deep-purple organic blob. A dark ink line runs through the blob horizontally. Playful, handmade feel — used for themes like ideas, gathering, progress, direction.</div>
+</div>
+</body></html>
