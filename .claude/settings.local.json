@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C \"c:/Users/Mustafa Hussain/PycharmProjects/london_int\" remote -v)"
+      "Bash(git -C \"c:/Users/Mustafa Hussain/PycharmProjects/london_int\" remote -v)",
+      "Bash(\"c:/Users/Mustafa Hussain/PycharmProjects/london_int/.venv/Scripts/python.exe\" -c \"import streamlit; print\\(streamlit.__version__\\)\")"
     ]
   }
 }

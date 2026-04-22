@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
+from urllib.parse import quote
 
 import folium
 import geopandas as gpd
@@ -41,29 +43,27 @@ ASSET_OVERLAY_STYLES = {
 
 
 def render_app_header() -> None:
-    left, right = st.columns([0.24, 0.76], vertical_alignment="center")
-    with left:
-        if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), width=220)
-        else:
-            st.markdown('<div class="brand-fallback">PPL</div>', unsafe_allow_html=True)
-    with right:
-        st.markdown(
-            """
-            <div class="brand-kicker">PPL</div>
-            <div class="brand-heading">London Neighbourhood Hub Decision Explorer</div>
-            <div class="brand-note">Candidate location ranking for neighbourhood hub planning</div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.html(
+        """
+        <div style="padding:10px 0 12px;border-bottom:1px solid #EAE3F0;margin-bottom:4px">
+            <div style="color:#0D0517;font-size:0.95rem;font-weight:700;
+                        font-family:Poppins,Inter,sans-serif;line-height:1.2">
+                London Neighbourhood Hub Decision Explorer
+            </div>
+            <div style="color:#6B6078;font-size:0.78rem;margin-top:3px;
+                        font-family:Poppins,Inter,sans-serif">
+                Candidate location ranking for neighbourhood hub planning
+            </div>
+        </div>
+        """
+    )
 
 
 def inject_styles() -> None:
-    st.markdown(
+    st.html(
         """
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
         :root {
             --ppl-purple: #490E6F;
             --ppl-deep: #350355;
@@ -77,190 +77,258 @@ def inject_styles() -> None:
             --ppl-cream: #FAF6FD;
             --shadow-sm: 0 1px 2px rgba(73,14,111,.06), 0 2px 8px rgba(73,14,111,.04);
             --shadow-md: 0 4px 14px rgba(73,14,111,.08), 0 10px 30px rgba(73,14,111,.06);
-            --shadow-lg: 0 20px 50px rgba(73,14,111,.14);
         }
-        html, body, [class*="css"] {
+
+        /* -- Global -- */
+        html, body {
             font-family: 'Poppins', Inter, system-ui, sans-serif !important;
+            font-size: 15px;
         }
-        .stApp {
-            background: var(--ppl-cream);
-        }
+        .stApp { background: var(--ppl-cream); }
+
+        /* Hide Streamlit chrome */
+        header[data-testid="stHeader"] { display: none !important; }
+        footer { display: none !important; }
+        #MainMenu { display: none !important; }
+        .stDeployButton { display: none !important; }
+
+        /* Main block */
         .block-container {
-            padding-top: 1.25rem;
-            padding-bottom: 2rem;
+            padding: 1.5rem 2rem 2rem !important;
             max-width: 1400px;
         }
+
+        /* -- Sidebar -- */
         section[data-testid="stSidebar"] {
             background-color: var(--ppl-purple);
+            min-width: 240px !important;
+            max-width: 280px !important;
+            overflow-x: hidden;
         }
         section[data-testid="stSidebar"] h1,
         section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3,
+        section[data-testid="stSidebar"] h3 {
+            color: rgba(255,255,255,.55) !important;
+            font-size: 0.62rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.12em !important;
+            text-transform: uppercase !important;
+            margin-bottom: 6px !important;
+        }
+        section[data-testid="stSidebar"] .stRadio > label {
+            color: rgba(255,255,255,.55) !important;
+            font-size: 0.62rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.12em !important;
+            text-transform: uppercase !important;
+        }
+        section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label p,
+        section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label span {
+            color: white !important;
+            font-size: 0.875rem !important;
+        }
         section[data-testid="stSidebar"] label,
         section[data-testid="stSidebar"] p,
-        section[data-testid="stSidebar"] .stMarkdown {
-            color: white !important;
-        }
+        section[data-testid="stSidebar"] .stMarkdown { color: white !important; }
         section[data-testid="stSidebar"] .stExpander details {
             border: 1px solid rgba(255,255,255,.18);
             border-radius: 8px;
             background: rgba(255,255,255,.06);
         }
-        section[data-testid="stSidebar"] .stExpander summary {
-            color: white !important;
-        }
+        section[data-testid="stSidebar"] .stExpander summary { color: white !important; }
         section[data-testid="stSidebar"] input,
         section[data-testid="stSidebar"] textarea {
             background: rgba(255,255,255,.1) !important;
             color: white !important;
             border-color: rgba(255,255,255,.2) !important;
+            font-size: 0.8rem !important;
         }
         .sidebar-credentials {
-            font-size: 0.72rem;
-            color: rgba(255,255,255,.5);
+            font-size: 0.62rem;
+            color: rgba(255,255,255,.45);
             text-align: center;
-            padding-top: 12px;
+            padding-top: 10px;
             border-top: 1px solid rgba(255,255,255,.12);
-            margin-top: 16px;
-            line-height: 1.6;
+            margin-top: 14px;
+            line-height: 1.7;
+            letter-spacing: 0.04em;
         }
+
+        /* -- App header -- */
         .brand-fallback {
             color: var(--ppl-purple);
             font-weight: 800;
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             line-height: 1;
         }
         .brand-kicker {
             color: var(--ppl-purple);
-            font-size: 0.72rem;
+            font-size: 0.62rem;
             font-weight: 700;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
             margin-bottom: 2px;
         }
         .brand-heading {
             color: var(--ppl-ink);
-            font-size: 1.35rem;
+            font-size: 0.95rem;
             font-weight: 700;
-            line-height: 1.1;
+            line-height: 1.2;
         }
         .brand-note {
             color: var(--ppl-muted);
-            font-size: 0.95rem;
-            text-align: left;
-            max-width: 640px;
-            margin-top: 6px;
+            font-size: 0.8rem;
+            max-width: 560px;
+            margin-top: 3px;
         }
+
+        /* -- Hero -- */
         .hero-shell {
             border: 1px solid var(--ppl-line);
-            border-radius: 24px;
-            padding: 24px 28px;
+            border-radius: 18px;
+            padding: 18px 22px;
             background: var(--ppl-paper);
             box-shadow: var(--shadow-md);
-            margin-bottom: 18px;
+            margin-bottom: 14px;
         }
         .hero-brand {
             color: var(--ppl-purple);
             font-weight: 700;
-            letter-spacing: 0.1em;
-            font-size: 0.72rem;
+            letter-spacing: 0.12em;
+            font-size: 0.62rem;
             text-transform: uppercase;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .hero-title {
             color: var(--ppl-ink);
-            font-size: 2.2rem;
+            font-size: 1.65rem;
             font-weight: 700;
-            line-height: 1.05;
-            margin-bottom: 8px;
+            line-height: 1.1;
+            margin-bottom: 6px;
         }
         .hero-subtitle {
             color: var(--ppl-ink2);
-            font-size: 1.05rem;
-            max-width: 920px;
+            font-size: 0.875rem;
+            max-width: 860px;
+            line-height: 1.55;
         }
+
+        /* -- Nav cards -- */
         .nav-card {
             border: 1px solid var(--ppl-line);
             border-radius: 12px;
-            padding: 14px 16px;
+            padding: 14px 16px 16px;
             background: var(--ppl-paper);
-            min-height: 170px;
+            display: flex;
+            flex-direction: column;
+            min-height: 180px;
             box-shadow: var(--shadow-sm);
-            transition: transform 150ms cubic-bezier(.2,.7,.2,1), box-shadow 150ms cubic-bezier(.2,.7,.2,1), border-color 150ms cubic-bezier(.2,.7,.2,1);
+            transition: border-color 150ms cubic-bezier(.2,.7,.2,1),
+                        box-shadow 150ms cubic-bezier(.2,.7,.2,1),
+                        transform 150ms cubic-bezier(.2,.7,.2,1);
+            height: 100%;
+        }
+        /* Equal-height nav card columns */
+        div[data-testid="stHorizontalBlock"]:has(.nav-card) {
+            align-items: stretch;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.nav-card) > div[data-testid="column"] > div {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
         .nav-card:hover {
             transform: translateY(-1px);
             border-color: var(--ppl-purple);
             box-shadow: var(--shadow-md);
         }
-        .nav-card-active {
-            border-color: var(--ppl-purple);
-            background: var(--ppl-paper);
-            box-shadow: var(--shadow-md);
-        }
+        .nav-card-active { border-color: var(--ppl-purple); box-shadow: var(--shadow-md); }
         .nav-card h4 {
-            margin: 0 0 6px 0;
+            margin: 0 0 5px 0;
             color: var(--ppl-ink);
-            font-size: 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
         .nav-card p {
             margin: 0;
             color: var(--ppl-muted);
-            font-size: 0.95rem;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            flex: 1;
         }
-        .nav-action {
+        .nav-btn {
+            display: block;
             margin-top: 14px;
+            padding: 9px 0;
+            background: var(--ppl-deep);
+            color: white !important;
+            text-align: center;
+            border-radius: 999px;
+            text-decoration: none !important;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            transition: background 150ms cubic-bezier(.2,.7,.2,1);
         }
-        .nav-action button {
-            width: 100%;
-            min-height: 42px;
+        .nav-btn:hover { background: var(--ppl-purple); }
+        .nav-btn-active {
+            background: var(--ppl-purple);
+            opacity: 0.7;
+            pointer-events: none;
         }
+
+        /* -- Section shells -- */
         .section-shell {
             border: 1px solid var(--ppl-line);
             border-radius: 12px;
-            padding: 18px 20px;
+            padding: 14px 16px;
             background: var(--ppl-paper);
             box-shadow: var(--shadow-sm);
-            margin-bottom: 18px;
+            margin-bottom: 14px;
         }
         .section-title {
             color: var(--ppl-ink);
-            font-size: 1.55rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .section-copy {
             color: var(--ppl-muted);
-            margin-bottom: 14px;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            line-height: 1.5;
         }
         .mini-label {
             color: var(--ppl-purple);
-            font-size: 0.72rem;
+            font-size: 0.62rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 6px;
+            letter-spacing: 0.1em;
+            margin-bottom: 5px;
         }
-        .stButton > button, div[data-testid="stDownloadButton"] > button {
+
+        /* -- Buttons -- */
+        .stButton > button,
+        div[data-testid="stDownloadButton"] > button {
             background: var(--ppl-purple);
             color: white;
             border: 1px solid var(--ppl-purple);
             border-radius: 999px;
             font-weight: 600;
+            font-size: 0.8rem;
             font-family: 'Poppins', Inter, system-ui, sans-serif;
-            transition: background 150ms cubic-bezier(.2,.7,.2,1), border-color 150ms cubic-bezier(.2,.7,.2,1);
+            padding: 0.35rem 1.1rem;
+            transition: background 150ms cubic-bezier(.2,.7,.2,1),
+                        border-color 150ms cubic-bezier(.2,.7,.2,1);
         }
-        .stButton > button:hover, div[data-testid="stDownloadButton"] > button:hover {
+        .stButton > button:hover,
+        div[data-testid="stDownloadButton"] > button:hover {
             background: var(--ppl-deep);
             border-color: var(--ppl-deep);
             color: white;
         }
-        input[type="radio"] {
-            accent-color: var(--ppl-purple);
-        }
-        div[role="radiogroup"] label[data-baseweb="radio"] {
-            align-items: center;
-        }
+
+        /* -- Metrics -- */
         div[data-testid="stMetric"] {
             background: var(--ppl-paper);
             border: 1px solid var(--ppl-line);
@@ -268,19 +336,60 @@ def inject_styles() -> None:
             border-radius: 12px;
             box-shadow: var(--shadow-sm);
         }
+        div[data-testid="stMetricLabel"] { font-size: 0.72rem !important; }
+        div[data-testid="stMetricValue"] { font-size: 1.3rem !important; }
+
+        /* -- Misc Streamlit overrides -- */
+        input[type="radio"] { accent-color: var(--ppl-purple); }
+        div[role="radiogroup"] label[data-baseweb="radio"] { align-items: center; }
+        .stAlert { font-size: 0.8rem; }
+        .stDataFrame { font-size: 0.8rem; }
+        h1, h2, h3 { font-size: 1.1rem !important; font-weight: 700 !important; }
+        p, li, label { font-size: 0.875rem; }
+
         @media (max-width: 900px) {
-            .brand-note {
-                max-width: none;
-            }
+            .brand-note { max-width: none; }
         }
         </style>
-        """,
-        unsafe_allow_html=True,
+        """
     )
+
+
+PPL_BANNER_WAVE = Path("PPL Design System/assets/ref-banner-wave.png")
+
+
+@st.cache_data(show_spinner=False)
+def _b64(path_str: str) -> str:
+    return base64.b64encode(Path(path_str).read_bytes()).decode()
+
+
+def _sidebar_header() -> None:
+    if PPL_BANNER_WAVE.exists():
+        b64 = _b64(str(PPL_BANNER_WAVE))
+        st.html(
+            f"""
+            <div style="margin:-2rem -2rem 0 -2rem;overflow:hidden;line-height:0">
+                <img src="data:image/png;base64,{b64}"
+                     style="display:block;width:calc(100% + 4rem);max-width:none">
+            </div>
+            <div style="padding:12px 0 14px;border-bottom:1px solid rgba(255,255,255,.14);
+                        margin-bottom:12px;font-family:Poppins,Inter,sans-serif">
+                <div style="color:rgba(255,255,255,.55);font-size:0.6rem;font-weight:700;
+                            letter-spacing:.1em;text-transform:uppercase;line-height:1">
+                    Decision Support
+                </div>
+                <div style="color:white;font-size:0.88rem;font-weight:700;
+                            line-height:1.3;margin-top:3px">
+                    Neighbourhood Hub<br>Explorer
+                </div>
+            </div>
+            """
+        )
 
 
 def build_config() -> AppConfig:
     with st.sidebar:
+        _sidebar_header()
         st.header("Configuration")
         with st.expander("Data Sources", expanded=False):
             deprivation_csv = Path(st.text_input("Deprivation CSV", value="data/core20_lsoa_latest.csv"))
@@ -423,52 +532,96 @@ def render_intro_page(report: ValidationReport, inventory: dict[str, int], curre
         """,
         unsafe_allow_html=True,
     )
-    cols = st.columns(3, gap="large")
-    for idx, (page_name, title, copy) in enumerate(card_specs):
-        active_class = " nav-card-active" if current_page == page_name else ""
+    # Only show cards for pages the user isn't already on
+    other_cards = [(pn, t, c) for pn, t, c in card_specs if pn != current_page]
+    cols = st.columns(len(other_cards), gap="medium")
+    for idx, (page_name, title, copy) in enumerate(other_cards):
+        href = f"?page={quote(page_name)}"
         with cols[idx]:
             st.markdown(
                 f"""
-                <div class="nav-card{active_class}">
+                <div class="nav-card">
                     <h4>{title}</h4>
                     <p>{copy}</p>
+                    <a class="nav-btn" href="{href}">Open {title.lower()}</a>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-            if st.button(
-                f"Open {title.lower()}",
-                key=f"nav_{page_name}",
-                use_container_width=True,
-                type="secondary" if current_page == page_name else "primary",
-            ):
-                st.query_params["page"] = page_name
-                st.rerun()
-    st.markdown('<div class="section-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">About this tool</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-copy">This application ranks proposed Neighbourhood Hub locations by estimating how much nearby need they would serve. It uses your existing London LSOA need inputs as the analytical engine, then applies a postcode-led proximity model around each candidate hub.</div>',
-        unsafe_allow_html=True,
-    )
-    st.write(
-        "Need Score is calculated at LSOA level from user-selected indices. Each selected index is min-max scaled "
-        "across the chosen geography, then combined using user-defined weights that must sum to 100."
-    )
-    st.write(
-        "Hub Score is calculated from the candidate postcode's host LSOA and surrounding LSOA centroids: "
-        "`0.60 x host Need Score + 0.25 x mean Need Score within 500m + 0.15 x mean Need Score between 500m and 2km`."
-    )
-    st.info("Outputs are decision-support only. They do not replace local service planning, estate checks, or clinical judgement.")
 
-    st.subheader("Data Validation")
-    render_validation_panel(report)
+    st.html("<div style='margin-top:16px'></div>")
 
-    st.subheader("Audit")
-    render_audit_metrics(report, inventory)
+    tab_about, tab_data = st.tabs(["About", "Data & Validation"])
 
-    st.subheader("Sources")
-    render_source_table(report)
-    st.markdown("</div>", unsafe_allow_html=True)
+    with tab_about:
+        st.html(
+            """
+            <div style="font-family:Poppins,Inter,sans-serif;padding:4px 0">
+
+                <p style="font-size:0.84rem;color:#3B2F48;line-height:1.65;margin:0 0 20px">
+                    This tool ranks proposed Neighbourhood Hub locations by estimating how much
+                    nearby population need each site would serve. It uses LSOA-level need data
+                    as its analytical base and applies a proximity-weighted scoring model around
+                    each candidate postcode.
+                </p>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+                    <div style="background:#F2EFFF;border-radius:10px;padding:14px">
+                        <div style="font-size:0.62rem;font-weight:700;color:#490E6F;text-transform:uppercase;
+                                    letter-spacing:.1em;margin-bottom:6px">Step 1</div>
+                        <div style="font-size:0.84rem;font-weight:600;color:#0D0517;margin-bottom:4px">Configure scope</div>
+                        <div style="font-size:0.78rem;color:#6B6078;line-height:1.5">
+                            Choose an ICB or all London, select neighbourhoods, and set index weights that sum to 100.
+                        </div>
+                    </div>
+                    <div style="background:#F2EFFF;border-radius:10px;padding:14px">
+                        <div style="font-size:0.62rem;font-weight:700;color:#490E6F;text-transform:uppercase;
+                                    letter-spacing:.1em;margin-bottom:6px">Step 2</div>
+                        <div style="font-size:0.84rem;font-weight:600;color:#0D0517;margin-bottom:4px">Score LSOAs</div>
+                        <div style="font-size:0.78rem;color:#6B6078;line-height:1.5">
+                            Each LSOA receives a Need Score: indices are min-max scaled within scope,
+                            weighted, and summed.
+                        </div>
+                    </div>
+                    <div style="background:#F2EFFF;border-radius:10px;padding:14px">
+                        <div style="font-size:0.62rem;font-weight:700;color:#490E6F;text-transform:uppercase;
+                                    letter-spacing:.1em;margin-bottom:6px">Step 3</div>
+                        <div style="font-size:0.84rem;font-weight:600;color:#0D0517;margin-bottom:4px">Rank candidate hubs</div>
+                        <div style="font-size:0.78rem;color:#6B6078;line-height:1.5">
+                            Each candidate postcode is scored using nearby LSOA demand and ranked highest to lowest.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="font-size:0.72rem;font-weight:700;color:#490E6F;text-transform:uppercase;
+                            letter-spacing:.08em;margin-bottom:8px">Hub Score formula</div>
+                <div style="background:#F2EFFF;border-left:3px solid #490E6F;border-radius:0 6px 6px 0;
+                            padding:11px 16px;font-family:ui-monospace,monospace;font-size:0.8rem;
+                            color:#0D0517;margin-bottom:16px;line-height:1.9">
+                    Hub Score =&nbsp; <strong>0.60</strong> &times; host LSOA need score<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;
+                    <strong>0.25</strong> &times; mean need score within 500 m<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;
+                    <strong>0.15</strong> &times; mean need score 500 m – 2 km
+                </div>
+
+                <div style="background:#FFF8EC;border:1px solid #D9A24A;border-radius:8px;
+                            padding:10px 14px;font-size:0.78rem;color:#3B2F48;line-height:1.55">
+                    <strong>Important:</strong> Outputs are decision-support only. They do not replace
+                    local service planning, estate checks, or clinical judgement. Scores are
+                    scope-relative — results are not comparable across runs with different geographies.
+                </div>
+            </div>
+            """
+        )
+
+    with tab_data:
+        st.markdown("##### Data validation")
+        render_validation_panel(report)
+        st.markdown("##### Audit")
+        render_audit_metrics(report, inventory)
+        st.markdown("##### Sources")
+        render_source_table(report)
 
 
 def selected_indices_controls() -> tuple[list[str], dict[str, float], float]:
@@ -658,8 +811,7 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="section-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="mini-label">Spatial Perspective</div>', unsafe_allow_html=True)
+    st.html('<div class="mini-label" style="font-family:Poppins,Inter,sans-serif;color:#490E6F;font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Spatial perspective</div>')
     geography_mode = st.radio("Geography", options=["All London", "Specific ICB"], horizontal=True, label_visibility="collapsed")
     icb_name = None
     if geography_mode == "Specific ICB":
@@ -688,36 +840,25 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     st.caption(
         f"Selected neighbourhoods: {len(selected_neighbourhoods)} of {len(neighbourhood_options) if neighbourhood_options else 0}"
     )
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div class="section-shell">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Neighbourhood coverage preview</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="section-copy">The preview map spans the page so users can confirm the footprint before moving into scoring inputs.</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown("#### Neighbourhood coverage preview")
+    st.caption("Confirm the footprint before configuring scoring inputs.")
     preview_map = build_neighbourhood_preview_map(config, geography_mode, icb_name, selected_neighbourhoods)
-    st_folium(preview_map, use_container_width=True, height=560, returned_objects=[])
-    st.markdown("</div>", unsafe_allow_html=True)
+    st_folium(preview_map, use_container_width=True, height=520, returned_objects=[])
 
     lower_left, lower_right = st.columns([1.05, 0.95], gap="large")
     with lower_left:
-        st.markdown('<div class="section-shell">', unsafe_allow_html=True)
         selected_indices, weights, total_weight = selected_indices_controls()
-        st.markdown("</div>", unsafe_allow_html=True)
     with lower_right:
-        st.markdown('<div class="section-shell">', unsafe_allow_html=True)
-        st.subheader("Candidate Hub Locations")
+        st.markdown("#### Candidate hub locations")
         candidate_postcodes_raw = st.text_area(
             "Enter one postcode per line",
             height=220,
             placeholder="E1 4DG\nSE1 2QH\nN15 4RX",
         )
         candidate_postcodes = parse_postcodes(candidate_postcodes_raw)
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div class="section-shell">', unsafe_allow_html=True)
-    st.subheader("Analysis Audit")
+    st.markdown("#### Analysis audit")
     audit_frame = pd.DataFrame(
         [
             {"Setting": "Selected geography", "Value": icb_name if icb_name else geography_mode},
@@ -740,7 +881,6 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
         ]
     )
     st.dataframe(audit_frame, use_container_width=True, hide_index=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
     can_run = bool(selected_indices) and total_weight == 100 and report.can_run_analysis and bool(candidate_postcodes)
     if total_weight != 100:
@@ -752,22 +892,32 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     if not report.can_run_analysis:
         st.error("Fix the blocking input issues shown on the Introduction page before running analysis.")
 
-    if st.button("Run analysis", type="primary", disabled=not can_run):
-        try:
-            with st.spinner("Running need and hub scoring..."):
-                result = run_analysis(
-                    config=config,
-                    geography_mode=geography_mode,
-                    icb_name=icb_name,
-                    index_weights=weights,
-                    candidate_postcodes=candidate_postcodes,
-                    selected_neighbourhoods=selected_neighbourhoods,
-                )
-            st.session_state["analysis_result"] = result
-            st.success("Analysis complete. Open the Output page to review the ranking.")
-        except Exception as exc:
-            st.session_state.pop("analysis_result", None)
-            st.error(str(exc))
+    run_col, goto_col = st.columns([0.6, 0.4], gap="medium")
+    with run_col:
+        if st.button("Run analysis", type="primary", disabled=not can_run, use_container_width=True):
+            try:
+                with st.spinner("Running need and hub scoring..."):
+                    result = run_analysis(
+                        config=config,
+                        geography_mode=geography_mode,
+                        icb_name=icb_name,
+                        index_weights=weights,
+                        candidate_postcodes=candidate_postcodes,
+                        selected_neighbourhoods=selected_neighbourhoods,
+                    )
+                st.session_state["analysis_result"] = result
+                st.success("Analysis complete.")
+            except Exception as exc:
+                st.session_state.pop("analysis_result", None)
+                st.error(str(exc))
+    with goto_col:
+        if st.session_state.get("analysis_result") is not None:
+            st.html(
+                f'<a href="?page=Outputs" style="display:block;padding:9px 0;background:#350355;'
+                f'color:white;text-align:center;border-radius:999px;text-decoration:none;'
+                f'font-size:0.8rem;font-weight:600;font-family:Poppins,Inter,sans-serif;'
+                f'margin-top:2px">View outputs</a>'
+            )
 
 
 def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None = None) -> folium.Map:
@@ -959,12 +1109,10 @@ def render_methodology_page() -> None:
         """,
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="section-shell">', unsafe_allow_html=True)
     if METHODOLOGY_PATH.exists():
         st.markdown(METHODOLOGY_PATH.read_text(encoding="utf-8"))
     else:
         st.error(f"Methodology file not found at {METHODOLOGY_PATH}.")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def main() -> None:
