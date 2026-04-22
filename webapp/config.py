@@ -34,7 +34,7 @@ class AppConfig:
     neighbourhoods_path: Path = NEIGHBOURHOOD_SHP
     lsoa_source: str = "live_arcgis"
     local_lsoa_path: Path | None = None
-    postcode_lsoa_lookup_csv: Path = Path("data/PCD to LSOA.csv")
+    postcode_lsoa_lookup_csv: Path = Path("data/london_postcode_to_lsoa.csv")
     postcode_source: str = "postcodes_io"
     postcode_coordinate_lookup_csv: Path | None = None
     postcode_api_base_url: str = "https://api.postcodes.io/postcodes"

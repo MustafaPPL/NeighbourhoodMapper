@@ -252,7 +252,7 @@ def build_config() -> AppConfig:
                 format_func=lambda value: "Live ArcGIS service" if value == "live_arcgis" else "Local file",
             )
             local_lsoa_raw = st.text_input("Local LSOA boundary file", value="")
-            postcode_lsoa_lookup_raw = st.text_input("Postcode to LSOA lookup", value="data/PCD to LSOA.csv")
+            postcode_lsoa_lookup_raw = st.text_input("Postcode to LSOA lookup", value="data/london_postcode_to_lsoa.csv")
             postcode_source = st.selectbox(
                 "Candidate postcode coordinate source",
                 options=["postcodes_io", "local_lookup", "none"],
