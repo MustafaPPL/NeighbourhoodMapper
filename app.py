@@ -639,7 +639,6 @@ def add_asset_overlays(
             ).add_to(layer)
         layer.add_to(fmap)
 
-    folium.LayerControl(collapsed=False).add_to(fmap)
     return fmap
 
 
@@ -806,6 +805,29 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
         ),
     ).add_to(fmap)
 
+    if "nghbrhd" in valid_need_scores.columns:
+        neighbourhood_boundaries = (
+            valid_need_scores[valid_need_scores["nghbrhd"].notna()]
+            .dissolve(by="nghbrhd")
+            .reset_index()[["nghbrhd", "geometry"]]
+        )
+        if not neighbourhood_boundaries.empty:
+            folium.GeoJson(
+                neighbourhood_boundaries.to_json(),
+                name="Neighbourhood boundaries",
+                style_function=lambda _: {
+                    "fillColor": "none",
+                    "color": "#490E6F",
+                    "weight": 2.0,
+                    "fillOpacity": 0,
+                },
+                tooltip=folium.GeoJsonTooltip(
+                    fields=["nghbrhd"],
+                    aliases=["Neighbourhood"],
+                    sticky=False,
+                ),
+            ).add_to(fmap)
+
     for _, row in valid_candidates.iterrows():
         hub_score_pct = pd.to_numeric(pd.Series([row.get("hub_score_pct")]), errors="coerce").iloc[0]
         hub_score_label = f"{hub_score_pct:.2f}" if pd.notna(hub_score_pct) else "N/A"
@@ -829,7 +851,9 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
             popup=popup,
         ).add_to(fmap)
 
-    return add_asset_overlays(fmap, result, selected_overlays or [])
+    fmap = add_asset_overlays(fmap, result, selected_overlays or [])
+    folium.LayerControl(collapsed=False).add_to(fmap)
+    return fmap
 
 
 def render_outputs_page() -> None:
