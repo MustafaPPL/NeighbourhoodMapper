@@ -24,7 +24,8 @@ BRAND_PURPLE_DARK = "#350355"
 BRAND_PURPLE_SOFT = "#FAF6FD"
 BRAND_PURPLE_MID = "#EAE3F0"
 BRAND_TEXT = "#0D0517"
-PAGES = ["Introduction", "Configure Inputs", "Outputs"]
+PAGES = ["Introduction", "Configure Inputs", "Outputs", "Methodology"]
+METHODOLOGY_PATH = Path("METHODOLOGY.md")
 ICB_CODE_BY_NAME = {
     "NHS North Central London ICB": "NCL",
     "NHS North East London ICB": "NEL",
@@ -945,6 +946,27 @@ def render_outputs_page() -> None:
     diag2.metric("Valid Hub Scores", f"{result.metadata.get('valid_hub_score_count', 0):,}")
 
 
+def render_methodology_page() -> None:
+    st.markdown(
+        """
+        <div class="hero-shell">
+            <div class="hero-brand">Quality Assurance</div>
+            <div class="hero-title">Methodology</div>
+            <div class="hero-subtitle">
+                A full description of the scoring logic, data inputs, and assumptions underlying this tool.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="section-shell">', unsafe_allow_html=True)
+    if METHODOLOGY_PATH.exists():
+        st.markdown(METHODOLOGY_PATH.read_text(encoding="utf-8"))
+    else:
+        st.error(f"Methodology file not found at {METHODOLOGY_PATH}.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 def main() -> None:
     inject_styles()
     render_app_header()
@@ -969,8 +991,10 @@ def main() -> None:
         render_intro_page(report, inventory, page)
     elif page == "Configure Inputs":
         render_configure_page(config, report)
-    else:
+    elif page == "Outputs":
         render_outputs_page()
+    else:
+        render_methodology_page()
 
 
 if __name__ == "__main__":
