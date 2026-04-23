@@ -19,7 +19,7 @@ from webapp.analysis import (
     run_analysis,
 )
 from webapp.config import AppConfig, ICB_CHOICES
-from webapp.data_access import load_asset_counts, load_neighbourhoods
+from webapp.data_access import geocode_candidate_postcodes, load_asset_counts, load_neighbourhoods
 from webapp.data_validation import ValidationReport, validate_config
 
 
@@ -666,42 +666,85 @@ def selected_indices_controls() -> tuple[list[str], dict[str, float], float]:
 
 def hub_score_weight_controls() -> tuple[dict[str, float], float]:
     st.subheader("Hub Scoring")
-    st.caption("Control how much the host LSOA and the continuous catchment contribute to the hub score.")
-    hub_score_weights = {
-        "host_lsoa": st.slider(
-            "Host LSOA weight",
-            min_value=0,
-            max_value=100,
-            value=int(DEFAULT_HUB_SCORE_WEIGHTS["host_lsoa"]),
-            step=5,
-            key="hub_weight_host_lsoa",
-        ),
-        "catchment": st.slider(
-            "Catchment weight",
-            min_value=0,
-            max_value=100,
-            value=int(DEFAULT_HUB_SCORE_WEIGHTS["catchment"]),
-            step=5,
-            key="hub_weight_catchment",
-        ),
-    }
-    total_weight = float(sum(hub_score_weights.values()))
-    st.metric("Hub weight total", f"{total_weight:.0f}")
-    return {name: float(value) for name, value in hub_score_weights.items()}, total_weight
+
+    st.markdown("**Scoring Balance**")
+    st.caption(
+        "Drag left to prioritise the need in the candidate site's own area; "
+        "drag right to weight the wider surrounding neighbourhood more heavily."
+    )
+    left_col, right_col = st.columns(2)
+    left_col.markdown(
+        '<div style="font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Local focus</div>',
+        unsafe_allow_html=True,
+    )
+    right_col.markdown(
+        '<div style="text-align:right;font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Neighbourhood reach</div>',
+        unsafe_allow_html=True,
+    )
+    balance = st.slider(
+        "Scoring balance",
+        min_value=0,
+        max_value=100,
+        value=int(DEFAULT_HUB_SCORE_WEIGHTS["host_lsoa"]),
+        step=5,
+        key="hub_weight_balance",
+        label_visibility="collapsed",
+    )
+    host_lsoa_weight = balance
+    catchment_weight = 100 - balance
+    left_col2, right_col2 = st.columns(2)
+    left_col2.markdown(
+        f'<div style="font-size:0.78rem;color:#6B6078">0 &nbsp;&nbsp;'
+        f'<span style="color:#0D0517;font-weight:600">Host LSOA: {host_lsoa_weight}</span></div>',
+        unsafe_allow_html=True,
+    )
+    right_col2.markdown(
+        f'<div style="text-align:right;font-size:0.78rem;color:#6B6078">'
+        f'<span style="color:#0D0517;font-weight:600">Catchment: {catchment_weight}</span> &nbsp;&nbsp; 100</div>',
+        unsafe_allow_html=True,
+    )
+
+    return {"host_lsoa": float(host_lsoa_weight), "catchment": float(catchment_weight)}, 100.0
 
 
 def catchment_radius_control() -> float:
-    st.caption("Distance decays linearly to zero at the chosen radius, so nearby LSOAs count more than farther ones.")
-    return float(
+    st.markdown("**Catchment Radius**")
+    st.caption(
+        "The furthest distance from the candidate site that counts toward its score. "
+        "Nearby LSOAs contribute fully; those at this edge contribute near-zero; beyond it they are ignored."
+    )
+    left_col, right_col = st.columns(2)
+    left_col.markdown(
+        '<div style="font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Minimum</div>',
+        unsafe_allow_html=True,
+    )
+    right_col.markdown(
+        '<div style="text-align:right;font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Maximum</div>',
+        unsafe_allow_html=True,
+    )
+    radius = float(
         st.slider(
-            "Catchment radius (metres)",
+            "Catchment radius",
             min_value=250,
-            max_value=3000,
+            max_value=5000,
             value=int(DEFAULT_CATCHMENT_RADIUS_M),
             step=250,
             key="catchment_radius_m",
+            label_visibility="collapsed",
         )
     )
+    walk_mins = round(radius / 83)
+    left_col2, right_col2 = st.columns(2)
+    left_col2.markdown(
+        '<div style="font-size:0.78rem;color:#6B6078">250 m</div>',
+        unsafe_allow_html=True,
+    )
+    right_col2.markdown(
+        f'<div style="text-align:right;font-size:0.78rem;color:#6B6078">5,000 m &nbsp;&nbsp;'
+        f'<span style="color:#0D0517;font-weight:600">≈ {walk_mins} min walk</span></div>',
+        unsafe_allow_html=True,
+    )
+    return radius
 
 
 def parse_postcodes(raw_text: str) -> list[str]:
@@ -767,6 +810,40 @@ def build_neighbourhood_preview_map(
             aliases=["Neighbourhood", "Borough", "ICB"],
             sticky=False,
         ),
+    ).add_to(fmap)
+    return fmap
+
+
+@st.cache_data(show_spinner=False)
+def geocode_single_postcode(postcode: str, config: AppConfig) -> tuple[float, float] | None:
+    result = geocode_candidate_postcodes([postcode], config)
+    if result.candidates.empty:
+        return None
+    row = result.candidates.iloc[0]
+    return (float(row.geometry.y), float(row.geometry.x))
+
+
+def build_catchment_preview_map(lat: float, lon: float, radius_m: float) -> folium.Map:
+    zoom = 16 if radius_m <= 300 else 15 if radius_m <= 600 else 14 if radius_m <= 1200 else 13 if radius_m <= 2000 else 12
+    fmap = folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB positron")
+    folium.CircleMarker(
+        location=[lat, lon],
+        radius=8,
+        color=BRAND_PURPLE_DARK,
+        fill=True,
+        fill_color=BRAND_PURPLE,
+        fill_opacity=0.9,
+        tooltip="Candidate location",
+    ).add_to(fmap)
+    folium.Circle(
+        location=[lat, lon],
+        radius=radius_m,
+        color=BRAND_PURPLE,
+        weight=2,
+        fill=True,
+        fill_color=BRAND_PURPLE,
+        fill_opacity=0.12,
+        tooltip=f"Catchment radius: {radius_m:,.0f} m",
     ).add_to(fmap)
     return fmap
 
@@ -884,19 +961,34 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     preview_map = build_neighbourhood_preview_map(config, geography_mode, icb_name, selected_neighbourhoods)
     st_folium(preview_map, use_container_width=True, height=520, returned_objects=[])
 
-    lower_left, lower_right = st.columns([1.05, 0.95], gap="large")
-    with lower_left:
-        selected_indices, weights, total_weight = selected_indices_controls()
-        hub_score_weights, hub_weight_total = hub_score_weight_controls()
-        catchment_radius_m = catchment_radius_control()
-    with lower_right:
-        st.markdown("#### Candidate hub locations")
-        candidate_postcodes_raw = st.text_area(
-            "Enter one postcode per line",
-            height=220,
-            placeholder="E1 4DG\nSE1 2QH\nN15 4RX",
+    st.markdown("#### Candidate hub locations")
+    candidate_postcodes_raw = st.text_area(
+        "Enter one postcode per line",
+        height=160,
+        placeholder="E1 4DG\nSE1 2QH\nN15 4RX",
+    )
+    candidate_postcodes = parse_postcodes(candidate_postcodes_raw)
+
+    selected_indices, weights, total_weight = selected_indices_controls()
+    hub_score_weights, _ = hub_score_weight_controls()
+    catchment_radius_m = catchment_radius_control()
+
+    if candidate_postcodes:
+        st.markdown("#### Catchment radius preview")
+        st.caption("Select a candidate location to see how the catchment radius looks on the map. Move the slider above to watch the circle grow or shrink.")
+        preview_postcode = st.selectbox(
+            "Host LSOA / candidate location",
+            options=candidate_postcodes,
+            key="catchment_preview_postcode",
         )
-        candidate_postcodes = parse_postcodes(candidate_postcodes_raw)
+        if preview_postcode:
+            coords = geocode_single_postcode(preview_postcode, config)
+            if coords:
+                lat, lon = coords
+                preview_map = build_catchment_preview_map(lat, lon, catchment_radius_m)
+                st_folium(preview_map, use_container_width=True, height=420, returned_objects=[])
+            else:
+                st.caption(f"Could not geocode {preview_postcode} — check that the postcode is valid.")
 
     st.markdown("#### Analysis audit")
     audit_frame = pd.DataFrame(
@@ -933,14 +1025,11 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     can_run = (
         bool(selected_indices)
         and total_weight == 100
-        and hub_weight_total == 100
         and report.can_run_analysis
         and bool(candidate_postcodes)
     )
     if total_weight != 100:
         st.error("Weights must sum to 100 before analysis can run.")
-    if hub_weight_total != 100:
-        st.error("Hub scoring weights must sum to 100 before analysis can run.")
     if not selected_indices:
         st.error("Select at least one index.")
     if not candidate_postcodes:
