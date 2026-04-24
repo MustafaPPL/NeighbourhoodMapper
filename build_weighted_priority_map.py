@@ -47,6 +47,10 @@ WARD_FS_BASE = (
     "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/"
     "Wards_December_2023_Boundaries_UK_BGC/FeatureServer/0"
 )
+PARKS_GARDENS_FS_BASE = (
+    "https://services-eu1.arcgis.com/ZOdPfBS3aqqDYPUQ/ArcGIS/rest/services/"
+    "National_Heritage_List_for_England_NHLE_v02_VIEW/FeatureServer/7"
+)
 REQUEST_TIMEOUT = 60
 USER_AGENT = "London-weighted-priority-mapper/1.0 (+python requests)"
 MAP_FIGSIZE = (12, 14)
@@ -76,6 +80,12 @@ out center;
 """
 ICB_OUTLINE_WIDTH = 0.9
 ICB_OUTLINE_COLOR = "#b7bec7"
+PARKS_GARDENS_LABEL = "Registered park/garden"
+PARKS_GARDENS_FILL_COLOR = "#D3FFBE"
+PARKS_GARDENS_EDGE_COLOR = "#267300"
+PARKS_GARDENS_FILL_ALPHA = 0.36
+PARKS_GARDENS_EDGE_ALPHA = 0.9
+PARKS_GARDENS_LINE_WIDTH = 0.55
 LONDON_HWB_PATTERN = (
     "BARKING|BARNET|BEXLEY|BRENT|BROMLEY|CAMDEN|CITY OF LONDON|CROYDON|EALING|ENFIELD|"
     "GREENWICH|HACKNEY|HAMMERSMITH|HARINGEY|HARROW|HAVERING|HILLINGDON|HOUNSLOW|ISLINGTON|"
@@ -822,6 +832,56 @@ def load_libraries() -> gpd.GeoDataFrame:
     return points_to_gdf(libraries)
 
 
+def fetch_parks_and_gardens(
+    target_boroughs: gpd.GeoDataFrame,
+    envelope: tuple[float, float, float, float],
+) -> gpd.GeoDataFrame:
+    parks = arcgis_query_to_gdf(
+        PARKS_GARDENS_FS_BASE,
+        out_fields="ListEntry,Name,Grade,RegDate,AmendDate,hyperlink,area_ha",
+        out_sr=4326,
+        geometry=envelope,
+    )
+    if parks.empty:
+        return gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+    if parks.crs is None:
+        parks = parks.set_crs("EPSG:4326")
+    else:
+        parks = parks.to_crs("EPSG:4326")
+
+    target_union = target_boroughs.to_crs("EPSG:4326").union_all()
+    return parks[parks.intersects(target_union)].copy()
+
+
+def plot_parks_and_gardens_overlay(ax: plt.Axes, parks_3857: gpd.GeoDataFrame) -> None:
+    if len(parks_3857) == 0:
+        return
+    parks_3857.plot(
+        ax=ax,
+        color=PARKS_GARDENS_FILL_COLOR,
+        edgecolor="none",
+        alpha=PARKS_GARDENS_FILL_ALPHA,
+        zorder=2.6,
+    )
+    parks_3857.boundary.plot(
+        ax=ax,
+        linewidth=PARKS_GARDENS_LINE_WIDTH,
+        color=PARKS_GARDENS_EDGE_COLOR,
+        alpha=PARKS_GARDENS_EDGE_ALPHA,
+        zorder=2.7,
+    )
+
+
+def build_parks_and_gardens_legend_handle() -> Patch:
+    return Patch(
+        facecolor=PARKS_GARDENS_FILL_COLOR,
+        edgecolor=PARKS_GARDENS_EDGE_COLOR,
+        linewidth=0.8,
+        alpha=0.65,
+        label=PARKS_GARDENS_LABEL,
+    )
+
+
 def filter_points_to_target(points: gpd.GeoDataFrame, target_boroughs: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     if len(points) == 0:
         return points.copy()
@@ -883,6 +943,7 @@ def fetch_and_cache_libraries() -> pd.DataFrame:
 def add_map_overlays(
     ax: plt.Axes,
     map_df_3857: gpd.GeoDataFrame,
+    parks_and_gardens_3857: gpd.GeoDataFrame,
     wards_3857: gpd.GeoDataFrame,
     neighbourhoods_3857: gpd.GeoDataFrame,
     icb_outline_3857: gpd.GeoDataFrame,
@@ -896,6 +957,8 @@ def add_map_overlays(
     output_path: Path,
     fig: plt.Figure,
 ) -> None:
+    plot_parks_and_gardens_overlay(ax, parks_and_gardens_3857)
+
     wards_3857.boundary.plot(ax=ax, linewidth=0.25, color="#585858", alpha=0.55, zorder=3)
     neighbourhoods_3857.boundary.plot(
         ax=ax,
@@ -1009,8 +1072,11 @@ def add_map_overlays(
         or len(trusts_3857) > 0
         or len(civic_centres_3857) > 0
         or len(libraries_3857) > 0
+        or len(parks_and_gardens_3857) > 0
     ):
-        handles: list[Line2D] = []
+        handles: list[Line2D | Patch] = []
+        if len(parks_and_gardens_3857) > 0:
+            handles.append(build_parks_and_gardens_legend_handle())
         if len(libraries_3857) > 0:
             handles.append(
                 Line2D([0], [0], marker="o", color="none", markerfacecolor="none", markeredgecolor="#2B6F8A", markeredgewidth=0.8, markersize=6, label="Library")
@@ -1072,6 +1138,7 @@ def add_map_overlays(
 
 def plot_priority_map(
     map_df_3857: gpd.GeoDataFrame,
+    parks_and_gardens_3857: gpd.GeoDataFrame,
     wards_3857: gpd.GeoDataFrame,
     neighbourhoods_3857: gpd.GeoDataFrame,
     icb_outline_3857: gpd.GeoDataFrame,
@@ -1105,6 +1172,7 @@ def plot_priority_map(
     add_map_overlays(
         ax,
         map_df_3857,
+        parks_and_gardens_3857,
         wards_3857,
         neighbourhoods_3857,
         icb_outline_3857,
@@ -1122,6 +1190,7 @@ def plot_priority_map(
 
 def plot_banded_metric_map(
     map_df_3857: gpd.GeoDataFrame,
+    parks_and_gardens_3857: gpd.GeoDataFrame,
     wards_3857: gpd.GeoDataFrame,
     neighbourhoods_3857: gpd.GeoDataFrame,
     icb_outline_3857: gpd.GeoDataFrame,
@@ -1169,6 +1238,7 @@ def plot_banded_metric_map(
     add_map_overlays(
         ax,
         map_df_3857,
+        parks_and_gardens_3857,
         wards_3857,
         neighbourhoods_3857,
         icb_outline_3857,
@@ -1232,9 +1302,16 @@ def create_maps(
         except FileNotFoundError:
             libraries = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
 
+    try:
+        parks_and_gardens = fetch_parks_and_gardens(target_boroughs, envelope)
+    except Exception as exc:
+        print(f"[warn] Could not load Historic England Parks and Gardens layer: {exc}")
+        parks_and_gardens = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+
     map_df = lsoa.merge(scored, on="LSOA_code", how="left", validate="1:1")
     scope_label = get_scope_label(scope, icb_name)
     map_df_3857 = add_older_people_density_columns(map_df.to_crs(3857))
+    parks_and_gardens_3857 = parks_and_gardens.to_crs(3857)
     wards_3857 = wards.to_crs(3857)
     neighbourhoods_3857 = neighbourhoods.to_crs(3857)
     icb_outline_3857 = icb_outline.to_crs(3857)
@@ -1249,6 +1326,7 @@ def create_maps(
         log_step(f"Rendering deprivation map -> {deprivation_output_path.name}")
         plot_priority_map(
             map_df_3857,
+            parks_and_gardens_3857,
             wards_3857,
             neighbourhoods_3857,
             icb_outline_3857,
@@ -1268,6 +1346,7 @@ def create_maps(
         log_step(f"Rendering 65+ proportion map -> {age_output_path.name}")
         plot_priority_map(
             map_df_3857,
+            parks_and_gardens_3857,
             wards_3857,
             neighbourhoods_3857,
             icb_outline_3857,
@@ -1287,6 +1366,7 @@ def create_maps(
         log_step(f"Rendering 65+ density map -> {age_density_output_path.name}")
         plot_banded_metric_map(
             map_df_3857,
+            parks_and_gardens_3857,
             wards_3857,
             neighbourhoods_3857,
             icb_outline_3857,
@@ -1306,6 +1386,7 @@ def create_maps(
         log_step(f"Rendering population density map -> {population_output_path.name}")
         plot_banded_metric_map(
             map_df_3857,
+            parks_and_gardens_3857,
             wards_3857,
             neighbourhoods_3857,
             icb_outline_3857,
@@ -1325,6 +1406,7 @@ def create_maps(
         log_step(f"Rendering weighted priority map -> {weighted_output_path.name}")
         plot_priority_map(
             map_df_3857,
+            parks_and_gardens_3857,
             wards_3857,
             neighbourhoods_3857,
             icb_outline_3857,

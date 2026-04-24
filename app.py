@@ -10,10 +10,18 @@ import streamlit as st
 from branca.colormap import linear
 from streamlit_folium import st_folium
 
-from build_weighted_priority_map import load_community_pharmacies, load_family_hubs, load_gp_practices
+from build_weighted_priority_map import (
+    PARKS_GARDENS_FS_BASE,
+    arcgis_query_to_gdf,
+    load_community_pharmacies,
+    load_family_hubs,
+    load_gp_practices,
+)
 from webapp.analysis import (
     DEFAULT_CATCHMENT_RADIUS_M,
     DEFAULT_HUB_SCORE_WEIGHTS,
+    DEFAULT_SUGGESTION_COUNT,
+    DEFAULT_SUGGESTION_MIN_SPACING_M,
     INDEX_DEFINITIONS,
     AnalysisResult,
     run_analysis,
@@ -40,10 +48,23 @@ ICB_CODE_BY_NAME = {
     "NHS South East London ICB": "SEL",
     "NHS South West London ICB": "SWL",
 }
+PARKS_AND_GARDENS_OVERLAY = "Parks and gardens"
 ASSET_OVERLAY_STYLES = {
-    "GP practices": {"loader": load_gp_practices, "color": "#D81B60", "radius": 5},
-    "Community pharmacies": {"loader": load_community_pharmacies, "color": "#1F77B4", "radius": 5},
-    "Family hubs": {"loader": load_family_hubs, "color": "#2CA02C", "radius": 5},
+    "GP practices": {"geometry_type": "point", "loader": load_gp_practices, "color": "#D81B60", "radius": 5},
+    "Community pharmacies": {
+        "geometry_type": "point",
+        "loader": load_community_pharmacies,
+        "color": "#1F77B4",
+        "radius": 5,
+    },
+    "Family hubs": {"geometry_type": "point", "loader": load_family_hubs, "color": "#2CA02C", "radius": 5},
+    PARKS_AND_GARDENS_OVERLAY: {
+        "geometry_type": "polygon",
+        "color": "#267300",
+        "fill_color": "#D3FFBE",
+        "weight": 1.0,
+        "fill_opacity": 0.28,
+    },
 }
 
 
@@ -872,6 +893,96 @@ def load_asset_overlay_frame(asset_name: str) -> pd.DataFrame:
     return frame.dropna(subset=["latitude", "longitude"])
 
 
+@st.cache_data(show_spinner=False, ttl=60 * 60 * 12)
+def load_parks_and_gardens_overlay(bounds: tuple[float, float, float, float]) -> gpd.GeoDataFrame:
+    parks = arcgis_query_to_gdf(
+        PARKS_GARDENS_FS_BASE,
+        out_fields="ListEntry,Name,Grade,RegDate,AmendDate,hyperlink,area_ha",
+        out_sr=4326,
+        geometry=bounds,
+    )
+    if parks.empty:
+        return gpd.GeoDataFrame(geometry=[], crs=4326)
+    if parks.crs is None:
+        return parks.set_crs(4326)
+    return parks.to_crs(4326)
+
+
+def add_point_asset_overlay(
+    fmap: folium.Map,
+    asset_name: str,
+    scope_union: object,
+) -> None:
+    style = ASSET_OVERLAY_STYLES[asset_name]
+    asset_points = load_asset_overlay_frame(asset_name)
+    if asset_points.empty:
+        return
+    asset_points = gpd.GeoDataFrame(
+        asset_points,
+        geometry=gpd.points_from_xy(asset_points["longitude"], asset_points["latitude"]),
+        crs=4326,
+    )
+    asset_points = asset_points[asset_points.intersects(scope_union)].copy()
+    if asset_points.empty:
+        return
+    layer = folium.FeatureGroup(name=asset_name, show=True)
+    for _, row in asset_points.iterrows():
+        folium.CircleMarker(
+            location=[float(row.geometry.y), float(row.geometry.x)],
+            radius=style["radius"],
+            color=style["color"],
+            weight=1,
+            fill=True,
+            fill_color=style["color"],
+            fill_opacity=0.85,
+            tooltip=f"{asset_name}: {row['label']}",
+        ).add_to(layer)
+    layer.add_to(fmap)
+
+
+def add_parks_and_gardens_overlay(
+    fmap: folium.Map,
+    scope_union: object,
+    bounds: tuple[float, float, float, float],
+) -> None:
+    style = ASSET_OVERLAY_STYLES[PARKS_AND_GARDENS_OVERLAY]
+    parks = load_parks_and_gardens_overlay(bounds)
+    if parks.empty:
+        return
+    parks = parks[parks.intersects(scope_union)].copy()
+    if parks.empty:
+        return
+    parks["geometry"] = parks.geometry.intersection(scope_union)
+    parks = parks[parks.geometry.notna() & (~parks.geometry.is_empty)].copy()
+    if parks.empty:
+        return
+
+    tooltip_fields = [field for field in ["Name", "Grade", "ListEntry", "area_ha"] if field in parks.columns]
+    tooltip_aliases = {
+        "Name": "Name",
+        "Grade": "Grade",
+        "ListEntry": "NHLE entry",
+        "area_ha": "Area (ha)",
+    }
+    folium.GeoJson(
+        parks.loc[:, [*tooltip_fields, "geometry"]].to_json(),
+        name=PARKS_AND_GARDENS_OVERLAY,
+        style_function=lambda _: {
+            "fillColor": style["fill_color"],
+            "color": style["color"],
+            "weight": style["weight"],
+            "fillOpacity": style["fill_opacity"],
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=tooltip_fields,
+            aliases=[tooltip_aliases[field] for field in tooltip_fields],
+            sticky=False,
+        )
+        if tooltip_fields
+        else None,
+    ).add_to(fmap)
+
+
 def add_asset_overlays(
     fmap: folium.Map,
     result: AnalysisResult,
@@ -881,32 +992,18 @@ def add_asset_overlays(
         return fmap
 
     scope_union = result.need_scores.to_crs(4326).union_all()
+    bounds = tuple(round(float(value), 6) for value in result.need_scores.to_crs(4326).total_bounds)
     for asset_name in selected_overlays:
-        style = ASSET_OVERLAY_STYLES[asset_name]
-        asset_points = load_asset_overlay_frame(asset_name)
-        if asset_points.empty:
+        style = ASSET_OVERLAY_STYLES.get(asset_name)
+        if style is None:
             continue
-        asset_points = gpd.GeoDataFrame(
-            asset_points,
-            geometry=gpd.points_from_xy(asset_points["longitude"], asset_points["latitude"]),
-            crs=4326,
-        )
-        asset_points = asset_points[asset_points.intersects(scope_union)].copy()
-        if asset_points.empty:
-            continue
-        layer = folium.FeatureGroup(name=asset_name, show=True)
-        for _, row in asset_points.iterrows():
-            folium.CircleMarker(
-                location=[float(row.geometry.y), float(row.geometry.x)],
-                radius=style["radius"],
-                color=style["color"],
-                weight=1,
-                fill=True,
-                fill_color=style["color"],
-                fill_opacity=0.85,
-                tooltip=f"{asset_name}: {row['label']}",
-            ).add_to(layer)
-        layer.add_to(fmap)
+        try:
+            if style["geometry_type"] == "polygon":
+                add_parks_and_gardens_overlay(fmap, scope_union, bounds)
+            else:
+                add_point_asset_overlay(fmap, asset_name, scope_union)
+        except Exception as exc:
+            st.warning(f"Could not load {asset_name}: {exc}")
 
     return fmap
 
@@ -962,18 +1059,59 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     st_folium(preview_map, use_container_width=True, height=520, returned_objects=[])
 
     st.markdown("#### Candidate hub locations")
-    candidate_postcodes_raw = st.text_area(
-        "Enter one postcode per line",
-        height=160,
-        placeholder="E1 4DG\nSE1 2QH\nN15 4RX",
+    candidate_workflow = st.radio(
+        "Candidate workflow",
+        options=["Rank provided postcodes", "Suggest locations"],
+        horizontal=True,
     )
-    candidate_postcodes = parse_postcodes(candidate_postcodes_raw)
+    candidate_mode = "suggested" if candidate_workflow == "Suggest locations" else "manual"
+    candidate_postcodes: list[str] = []
+    suggestion_count = DEFAULT_SUGGESTION_COUNT
+    suggestion_min_spacing_m = float(DEFAULT_SUGGESTION_MIN_SPACING_M)
+    suggestion_one_per_neighbourhood = True
+
+    if candidate_mode == "manual":
+        candidate_postcodes_raw = st.text_area(
+            "Enter one postcode per line",
+            height=160,
+            placeholder="E1 4DG\nSE1 2QH\nN15 4RX",
+        )
+        candidate_postcodes = parse_postcodes(candidate_postcodes_raw)
+    else:
+        st.caption(
+            "The app will score LSOA-centroid search locations and label each one with a representative postcode "
+            "from the host LSOA. Treat suggestions as starting points for local estate and engagement checks."
+        )
+        suggestion_col, spacing_col, diversity_col = st.columns(3, gap="medium")
+        with suggestion_col:
+            suggestion_count = int(
+                st.number_input(
+                    "Number of suggestions",
+                    min_value=1,
+                    max_value=25,
+                    value=DEFAULT_SUGGESTION_COUNT,
+                    step=1,
+                )
+            )
+        with spacing_col:
+            suggestion_min_spacing_m = float(
+                st.slider(
+                    "Minimum spacing",
+                    min_value=0,
+                    max_value=5000,
+                    value=DEFAULT_SUGGESTION_MIN_SPACING_M,
+                    step=250,
+                    format="%d m",
+                )
+            )
+        with diversity_col:
+            suggestion_one_per_neighbourhood = st.toggle("One per neighbourhood", value=True)
 
     selected_indices, weights, total_weight = selected_indices_controls()
     hub_score_weights, _ = hub_score_weight_controls()
     catchment_radius_m = catchment_radius_control()
 
-    if candidate_postcodes:
+    if candidate_mode == "manual" and candidate_postcodes:
         st.markdown("#### Catchment radius preview")
         st.caption("Select a candidate location to see how the catchment radius looks on the map. Move the slider above to watch the circle grow or shrink.")
         preview_postcode = st.selectbox(
@@ -1001,7 +1139,13 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
                 if selected_neighbourhoods
                 else "Full selected geography",
             },
-            {"Setting": "Candidate hubs", "Value": len(candidate_postcodes)},
+            {"Setting": "Candidate workflow", "Value": candidate_workflow},
+            {
+                "Setting": "Candidate hubs",
+                "Value": len(candidate_postcodes)
+                if candidate_mode == "manual"
+                else f"Suggest up to {suggestion_count}",
+            },
             {
                 "Setting": "Indices and weights",
                 "Value": ", ".join(
@@ -1018,30 +1162,45 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
                 ),
             },
             {"Setting": "Catchment radius", "Value": f"{catchment_radius_m:,.0f} m"},
+            {
+                "Setting": "Suggestion constraints",
+                "Value": (
+                    "N/A"
+                    if candidate_mode == "manual"
+                    else f"{suggestion_min_spacing_m:,.0f} m spacing; "
+                    f"{'one per neighbourhood' if suggestion_one_per_neighbourhood else 'multiple per neighbourhood allowed'}"
+                ),
+            },
         ]
     )
     st.dataframe(audit_frame, use_container_width=True, hide_index=True)
 
+    report_can_run = report.can_run_analysis if candidate_mode == "manual" else report.can_run_candidate_discovery
     can_run = (
         bool(selected_indices)
         and total_weight == 100
-        and report.can_run_analysis
-        and bool(candidate_postcodes)
+        and report_can_run
+        and (candidate_mode == "suggested" or bool(candidate_postcodes))
     )
     if total_weight != 100:
         st.error("Weights must sum to 100 before analysis can run.")
     if not selected_indices:
         st.error("Select at least one index.")
-    if not candidate_postcodes:
+    if candidate_mode == "manual" and not candidate_postcodes:
         st.error("Enter at least one candidate postcode.")
-    if not report.can_run_analysis:
+    if not report_can_run:
         st.error("Fix the blocking input issues shown on the Introduction page before running analysis.")
 
     run_col, goto_col = st.columns([0.6, 0.4], gap="medium")
     with run_col:
         if st.button("Run analysis", type="primary", disabled=not can_run, use_container_width=True):
             try:
-                with st.spinner("Running need and hub scoring..."):
+                spinner_text = (
+                    "Running need scoring and suggesting candidate locations..."
+                    if candidate_mode == "suggested"
+                    else "Running need and hub scoring..."
+                )
+                with st.spinner(spinner_text):
                     result = run_analysis(
                         config=config,
                         geography_mode=geography_mode,
@@ -1051,6 +1210,10 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
                         catchment_radius_m=catchment_radius_m,
                         candidate_postcodes=candidate_postcodes,
                         selected_neighbourhoods=selected_neighbourhoods,
+                        candidate_mode=candidate_mode,
+                        suggestion_count=suggestion_count,
+                        suggestion_min_spacing_m=suggestion_min_spacing_m,
+                        suggestion_one_per_neighbourhood=suggestion_one_per_neighbourhood,
                     )
                 st.session_state["analysis_result"] = result
                 st.success("Analysis complete.")
@@ -1059,12 +1222,10 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
                 st.error(str(exc))
     with goto_col:
         if st.session_state.get("analysis_result") is not None:
-            st.html(
-                f'<a href="?page=Outputs" style="display:block;padding:9px 0;background:#350355;'
-                f'color:white;text-align:center;border-radius:999px;text-decoration:none;'
-                f'font-size:0.8rem;font-weight:600;font-family:Poppins,Inter,sans-serif;'
-                f'margin-top:2px">View outputs</a>'
-            )
+            if st.button("View outputs", type="secondary", use_container_width=True):
+                st.session_state["active_page"] = "Outputs"
+                st.query_params["page"] = "Outputs"
+                st.rerun()
 
 
 def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None = None) -> folium.Map:
@@ -1130,9 +1291,12 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
         hub_score_pct = pd.to_numeric(pd.Series([row.get("hub_score_pct")]), errors="coerce").iloc[0]
         hub_score_label = f"{hub_score_pct:.2f}" if pd.notna(hub_score_pct) else "N/A"
         catchment_radius_m = pd.to_numeric(pd.Series([row.get("catchment_radius_m")]), errors="coerce").iloc[0]
+        is_suggested = bool(row.get("is_suggested", False))
+        candidate_source = row.get("candidate_source", "Candidate postcode")
         popup = folium.Popup(
             html=(
                 f"<strong>{row['postcode']}</strong><br>"
+                f"{candidate_source}<br>"
                 f"Rank: {row['rank']}<br>"
                 f"Hub Score: {hub_score_label}<br>"
                 f"Host LSOA: {row['LSOA_code']}"
@@ -1153,10 +1317,10 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
         folium.CircleMarker(
             location=[row.geometry.y, row.geometry.x],
             radius=7,
-            color="#350355",
+            color="#7C4A03" if is_suggested else "#350355",
             weight=1,
             fill=True,
-            fill_color="#9576FF",
+            fill_color="#D9A24A" if is_suggested else "#9576FF",
             fill_opacity=0.95,
             popup=popup,
         ).add_to(fmap)
@@ -1207,22 +1371,32 @@ def render_outputs_page() -> None:
             options=list(ASSET_OVERLAY_STYLES),
             default=list(ASSET_OVERLAY_STYLES) if show_existing_assets else [],
             disabled=not show_existing_assets,
-            placeholder="Select GP practices, community pharmacies, and family hubs",
+            placeholder="Select GP practices, community pharmacies, family hubs, and parks and gardens",
         )
     st_folium(build_output_map(result, selected_overlays), use_container_width=True, height=700)
 
-    st.subheader("Ranked Candidate Hubs")
+    candidate_mode = str(result.metadata.get("candidate_mode", "manual"))
+    st.subheader("Suggested Candidate Locations" if candidate_mode == "suggested" else "Ranked Candidate Hubs")
+    if candidate_mode == "suggested":
+        st.caption(str(result.metadata.get("candidate_location_note", "")))
     table = result.candidate_scores.drop(columns="geometry").copy()
     ordered_columns = [
         "postcode",
         "rank",
         "hub_score_pct",
         "LSOA_code",
+        "LSOA_name",
+        "borough",
+        "nghbrhd",
         "host_need_score_pct",
         "weighted_catchment_need_score_pct",
         "lsoas_in_catchment",
         "catchment_radius_m",
+        "postcode_count_in_lsoa",
+        "candidate_source",
+        "coordinate_source",
         "geocode_source",
+        "postcode_note",
     ]
     available_columns = [column for column in ordered_columns if column in table.columns]
     st.dataframe(table.loc[:, available_columns], use_container_width=True, hide_index=True)
@@ -1246,6 +1420,11 @@ def render_outputs_page() -> None:
         st.write(f"Neighbourhood focus: {', '.join(neighbourhood_summary)}")
     else:
         st.write("Neighbourhood focus: full selected geography.")
+    if candidate_mode == "suggested":
+        st.write(
+            "Candidate discovery scored host LSOA centroids, applied spacing/diversity constraints, and labelled each "
+            "selected search location with a representative postcode from the host LSOA."
+        )
     st.write(
         "Need Score uses min-max scaled indices within the selected geography. Hub Score combines the host LSOA "
         "Need Score with a linearly distance-weighted catchment mean inside the selected radius."
@@ -1254,7 +1433,8 @@ def render_outputs_page() -> None:
     st.subheader("Audit")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("LSOAs analysed", f"{result.metadata['lsoa_count']:,}")
-    col2.metric("Candidate hubs ranked", f"{result.metadata['candidate_count']:,}")
+    candidate_metric_label = "Suggested locations" if candidate_mode == "suggested" else "Candidate hubs ranked"
+    col2.metric(candidate_metric_label, f"{result.metadata['candidate_count']:,}")
     col3.metric("Generated", str(result.metadata["generated_at"]))
     col4.metric("Data version", str(result.metadata["data_version"]))
     diag1, diag2 = st.columns(2)
@@ -1293,8 +1473,10 @@ def main() -> None:
         query_page = query_page[0]
     if query_page not in PAGES:
         query_page = PAGES[0]
+    if "active_page" not in st.session_state or st.session_state["active_page"] not in PAGES:
+        st.session_state["active_page"] = query_page
 
-    page = st.sidebar.radio("Pages", options=PAGES, index=PAGES.index(query_page))
+    page = st.sidebar.radio("Pages", options=PAGES, key="active_page")
     st.sidebar.markdown(
         '<div class="sidebar-credentials">B Corp · Social Enterprise UK<br>FT Leading Consultancy 2025</div>',
         unsafe_allow_html=True,

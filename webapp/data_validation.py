@@ -36,6 +36,14 @@ class ValidationReport:
     def can_run_analysis(self) -> bool:
         return not self.blocking_issues
 
+    @property
+    def can_run_candidate_discovery(self) -> bool:
+        geocoding_messages = {
+            "Local postcode coordinate lookup is not configured.",
+            "No postcode geocoding source is configured.",
+        }
+        return not [issue for issue in self.blocking_issues if issue.message not in geocoding_messages]
+
 
 def _timestamp_for(path: Path) -> str:
     if not path.exists():

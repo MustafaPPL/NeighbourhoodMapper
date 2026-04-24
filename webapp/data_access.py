@@ -148,6 +148,7 @@ def load_postcode_lsoa_lookup(path: Path) -> pd.DataFrame:
     postcode_column = detect_column(lookup.columns, ["pcds", "postcode", "pcd7", "pcd8", "pcd", "Postcode"])
     lsoa_column = detect_column(lookup.columns, ["lsoa21cd", "LSOA_code", "lsoa_code", "LSOA21CD"])
     lsoa_name_column = detect_column(lookup.columns, ["lsoa21nm", "LSOA_name", "lsoa_name", "LSOA21NM"])
+    borough_column = detect_column(lookup.columns, ["borough", "local_authority", "lad_name", "LAD23NM", "LADNM"])
     if postcode_column is None or lsoa_column is None:
         raise ValueError(
             f"Postcode-to-LSOA file {path} must contain postcode and LSOA code columns. "
@@ -156,12 +157,13 @@ def load_postcode_lsoa_lookup(path: Path) -> pd.DataFrame:
     rename_map = {postcode_column: "postcode", lsoa_column: "LSOA_code"}
     if lsoa_name_column is not None:
         rename_map[lsoa_name_column] = "LSOA_name"
+    if borough_column is not None:
+        rename_map[borough_column] = "borough"
     lookup = lookup.rename(columns=rename_map)
     lookup["postcode_normalized"] = lookup["postcode"].map(normalize_postcode)
     lookup = lookup.dropna(subset=["postcode_normalized", "LSOA_code"]).drop_duplicates("postcode_normalized")
     keep_columns = ["postcode", "postcode_normalized", "LSOA_code"]
-    if "LSOA_name" in lookup.columns:
-        keep_columns.append("LSOA_name")
+    keep_columns.extend([column for column in ["LSOA_name", "borough"] if column in lookup.columns])
     return lookup.loc[:, keep_columns]
 
 

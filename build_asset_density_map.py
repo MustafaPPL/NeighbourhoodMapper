@@ -16,9 +16,12 @@ from build_weighted_priority_map import (
     NEIGHBOURHOOD_LINE_HALO_WIDTH,
     NEIGHBOURHOOD_LINE_MAIN_WIDTH,
     OUTPUT_DIR,
+    build_parks_and_gardens_legend_handle,
     build_icb_outline,
+    fetch_parks_and_gardens,
     fetch_london_base_geographies,
     fetch_london_lsoa_boundaries,
+    plot_parks_and_gardens_overlay,
     load_community_pharmacies,
     load_family_hubs,
     load_gp_practices,
@@ -221,9 +224,14 @@ def build_summary(neighbourhoods: gpd.GeoDataFrame, args: argparse.Namespace) ->
 
 def create_map(summary: gpd.GeoDataFrame, map_png: Path) -> None:
     neighbourhoods_3857 = summary.to_crs(METRIC_CRS)
-    london_boroughs, _, _ = fetch_london_base_geographies()
+    london_boroughs, _, envelope = fetch_london_base_geographies()
     boroughs_3857 = london_boroughs.to_crs(METRIC_CRS)
     icb_outline_3857 = build_icb_outline(london_boroughs).to_crs(METRIC_CRS)
+    try:
+        parks_and_gardens_3857 = fetch_parks_and_gardens(london_boroughs, envelope).to_crs(METRIC_CRS)
+    except Exception as exc:
+        print(f"[warn] Could not load Historic England Parks and Gardens layer: {exc}")
+        parks_and_gardens_3857 = gpd.GeoDataFrame(geometry=[], crs=WGS84).to_crs(METRIC_CRS)
 
     fig, ax = plt.subplots(figsize=MAP_FIGSIZE)
     cax = inset_axes(ax, width="4%", height="30%", loc="lower right", borderpad=2)
@@ -241,6 +249,8 @@ def create_map(summary: gpd.GeoDataFrame, map_png: Path) -> None:
     cax.tick_params(labelsize=8, length=0, pad=2)
     cax.yaxis.set_ticks_position("left")
     cax.set_ylabel("Service desert score", fontsize=8)
+
+    plot_parks_and_gardens_overlay(ax, parks_and_gardens_3857)
 
     boroughs_3857.boundary.plot(ax=ax, linewidth=0.35, color="#606060", alpha=0.7, zorder=3)
     neighbourhoods_3857.boundary.plot(
@@ -284,7 +294,20 @@ def create_map(summary: gpd.GeoDataFrame, map_png: Path) -> None:
         fontsize=14,
         pad=16,
     )
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.94, bottom=0.02)
+    if len(parks_and_gardens_3857) > 0:
+        fig.legend(
+            handles=[build_parks_and_gardens_legend_handle()],
+            loc="lower center",
+            bbox_to_anchor=(0.5, 0.03),
+            ncol=1,
+            fontsize=8,
+            frameon=True,
+            handletextpad=0.5,
+        )
+        bottom = 0.08
+    else:
+        bottom = 0.02
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.94, bottom=bottom)
     map_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(map_png, dpi=MAP_DPI, bbox_inches="tight")
     plt.close(fig)

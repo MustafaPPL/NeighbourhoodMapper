@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
+from build_weighted_priority_map import build_parks_and_gardens_legend_handle
 from project_paths import OUTPUT_DIR
 
 
@@ -12,6 +13,7 @@ OUTPUT_PNG = OUTPUT_DIR / "weighted_map_legend.png"
 
 def main() -> None:
     handles = [
+        build_parks_and_gardens_legend_handle(),
         Line2D(
             [0],
             [0],
@@ -42,7 +44,7 @@ def main() -> None:
         Line2D([0], [0], marker="s", color="none", markerfacecolor="#6B46C1", markeredgecolor="white", markeredgewidth=0.5, markersize=7.5, label="Mental Health Trust"),
     ]
 
-    fig, ax = plt.subplots(figsize=(3.8, 3.0), dpi=220)
+    fig, ax = plt.subplots(figsize=(4.2, 3.3), dpi=220)
     ax.axis("off")
     legend = ax.legend(
         handles=handles,

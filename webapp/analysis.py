@@ -14,6 +14,7 @@ from webapp.data_access import (
     load_lsoa_boundaries,
     load_need_inputs,
     load_neighbourhoods,
+    load_postcode_lsoa_lookup,
 )
 
 
@@ -45,6 +46,8 @@ DEFAULT_HUB_SCORE_WEIGHTS = {
     "catchment": 40.0,
 }
 DEFAULT_CATCHMENT_RADIUS_M = 2000
+DEFAULT_SUGGESTION_COUNT = 5
+DEFAULT_SUGGESTION_MIN_SPACING_M = 1000
 
 
 @dataclass(frozen=True)
@@ -144,6 +147,111 @@ def _score_single_candidate(
     }
 
 
+def _representative_postcodes_by_lsoa(config: AppConfig) -> pd.DataFrame:
+    lookup = load_postcode_lsoa_lookup(config.postcode_lsoa_lookup_csv)
+    lookup = lookup.sort_values(["LSOA_code", "postcode"]).copy()
+    aggregations: dict[str, tuple[str, str]] = {
+        "postcode": ("postcode", "first"),
+        "postcode_normalized": ("postcode_normalized", "first"),
+        "postcode_count_in_lsoa": ("postcode", "size"),
+    }
+    if "LSOA_name" in lookup.columns:
+        aggregations["LSOA_name"] = ("LSOA_name", "first")
+    representative = lookup.groupby("LSOA_code", as_index=False).agg(**aggregations)
+    return representative
+
+
+def _select_spaced_suggestions(
+    scored_bng: gpd.GeoDataFrame,
+    suggestion_count: int,
+    min_spacing_m: float,
+    one_per_neighbourhood: bool,
+) -> gpd.GeoDataFrame:
+    selected_indices: list[int] = []
+    selected_geometries = []
+    selected_neighbourhoods: set[str] = set()
+
+    for index, row in scored_bng.iterrows():
+        neighbourhood = row.get("nghbrhd")
+        neighbourhood_key = str(neighbourhood).strip() if pd.notna(neighbourhood) else ""
+        if one_per_neighbourhood and neighbourhood_key and neighbourhood_key in selected_neighbourhoods:
+            continue
+        if min_spacing_m > 0 and any(row.geometry.distance(geometry) < min_spacing_m for geometry in selected_geometries):
+            continue
+
+        selected_indices.append(index)
+        selected_geometries.append(row.geometry)
+        if neighbourhood_key:
+            selected_neighbourhoods.add(neighbourhood_key)
+        if len(selected_indices) >= suggestion_count:
+            break
+
+    return scored_bng.loc[selected_indices].copy()
+
+
+def suggest_candidate_hubs(
+    need_scores: gpd.GeoDataFrame,
+    config: AppConfig,
+    hub_score_weights: dict[str, float],
+    catchment_radius_m: float,
+    suggestion_count: int = DEFAULT_SUGGESTION_COUNT,
+    min_spacing_m: float = DEFAULT_SUGGESTION_MIN_SPACING_M,
+    one_per_neighbourhood: bool = True,
+) -> gpd.GeoDataFrame:
+    need_columns = [
+        column
+        for column in ["LSOA_code", "ICB", "borough", "nghbrhd", "need_score", "need_score_pct"]
+        if column in need_scores.columns
+    ]
+    scoped_need = need_scores.loc[:, [*need_columns, "geometry"]].copy()
+    scoped_need = scoped_need[pd.to_numeric(scoped_need["need_score"], errors="coerce").notna()].copy()
+    if scoped_need.empty:
+        return gpd.GeoDataFrame(geometry=[], crs=need_scores.crs)
+
+    representative_postcodes = _representative_postcodes_by_lsoa(config)
+    centroids = scoped_need.to_crs(BRITISH_NATIONAL_GRID)
+    centroids["geometry"] = centroids.geometry.centroid
+    candidates = centroids.merge(representative_postcodes, on="LSOA_code", how="left")
+    candidates = candidates.dropna(subset=["postcode"]).copy()
+    if candidates.empty:
+        return gpd.GeoDataFrame(geometry=[], crs=BRITISH_NATIONAL_GRID)
+
+    scoring_centroids = centroids.loc[:, ["LSOA_code", "need_score", "need_score_pct", "geometry"]].copy()
+    rows: list[dict[str, object]] = []
+    for _, candidate in candidates.iterrows():
+        row = candidate.drop(labels=["geometry"]).to_dict()
+        row.update(_score_single_candidate(candidate, scoring_centroids, hub_score_weights, catchment_radius_m))
+        row["candidate_source"] = "Suggested search location"
+        row["coordinate_source"] = "Host LSOA centroid"
+        row["geocode_source"] = "LSOA centroid"
+        row["postcode_lookup_source"] = "postcode_to_lsoa_file"
+        row["host_lsoa_in_scope"] = True
+        row["is_suggested"] = True
+        row["postcode_note"] = "Representative postcode in the host LSOA; map marker uses the LSOA centroid."
+        rows.append(row)
+
+    scored = pd.DataFrame(rows)
+    scored["hub_score_pct"] = (pd.to_numeric(scored["hub_score"], errors="coerce") * 100).round(2)
+    scored["host_need_score_pct"] = (pd.to_numeric(scored["host_need_score"], errors="coerce") * 100).round(2)
+    scored["weighted_catchment_need_score_pct"] = (
+        pd.to_numeric(scored["weighted_catchment_need_score"], errors="coerce") * 100
+    ).round(2)
+    scored_bng = gpd.GeoDataFrame(scored, geometry=candidates.geometry.reset_index(drop=True), crs=BRITISH_NATIONAL_GRID)
+    scored_bng = scored_bng.sort_values(
+        ["hub_score", "host_need_score", "need_score"],
+        ascending=[False, False, False],
+    )
+    selected = _select_spaced_suggestions(
+        scored_bng,
+        max(1, int(suggestion_count)),
+        float(min_spacing_m),
+        one_per_neighbourhood,
+    )
+    selected = selected.reset_index(drop=True)
+    selected["rank"] = selected.index + 1
+    return selected.to_crs(need_scores.crs)
+
+
 def rank_candidate_hubs(
     need_scores: gpd.GeoDataFrame,
     candidate_postcodes: list[str],
@@ -173,6 +281,9 @@ def rank_candidate_hubs(
     scored["weighted_catchment_need_score_pct"] = (
         pd.to_numeric(scored["weighted_catchment_need_score"], errors="coerce") * 100
     ).round(2)
+    scored["candidate_source"] = "User supplied postcode"
+    scored["coordinate_source"] = scored.get("geocode_source", "Configured postcode geocoder")
+    scored["is_suggested"] = False
     scored = scored.sort_values(["hub_score", "host_need_score"], ascending=[False, False]).reset_index(drop=True)
     scored["rank"] = scored.index + 1
     return (
@@ -189,8 +300,12 @@ def run_analysis(
     index_weights: dict[str, float],
     hub_score_weights: dict[str, float],
     catchment_radius_m: float,
-    candidate_postcodes: list[str],
+    candidate_postcodes: list[str] | None = None,
     selected_neighbourhoods: list[str] | None = None,
+    candidate_mode: str = "manual",
+    suggestion_count: int = DEFAULT_SUGGESTION_COUNT,
+    suggestion_min_spacing_m: float = DEFAULT_SUGGESTION_MIN_SPACING_M,
+    suggestion_one_per_neighbourhood: bool = True,
 ) -> AnalysisResult:
     need_scores = build_need_scores(config, geography_mode, icb_name, index_weights, selected_neighbourhoods)
     if need_scores.empty:
@@ -203,23 +318,49 @@ def run_analysis(
             "Need Scores could not be calculated for the selected scope. Check that the selected indices contain "
             "valid values within the chosen geography."
         )
-    candidate_scores, invalid_postcodes, unresolved_postcodes = rank_candidate_hubs(
-        need_scores,
-        candidate_postcodes,
-        config,
-        hub_score_weights,
-        catchment_radius_m,
-    )
+    if candidate_mode == "suggested":
+        candidate_scores = suggest_candidate_hubs(
+            need_scores,
+            config,
+            hub_score_weights,
+            catchment_radius_m,
+            suggestion_count=suggestion_count,
+            min_spacing_m=suggestion_min_spacing_m,
+            one_per_neighbourhood=suggestion_one_per_neighbourhood,
+        )
+        invalid_postcodes: list[str] = []
+        unresolved_postcodes: list[str] = []
+    else:
+        candidate_postcodes = candidate_postcodes or []
+        if not candidate_postcodes:
+            raise ValueError("Enter at least one candidate postcode, or switch to Suggest locations.")
+        candidate_scores, invalid_postcodes, unresolved_postcodes = rank_candidate_hubs(
+            need_scores,
+            candidate_postcodes,
+            config,
+            hub_score_weights,
+            catchment_radius_m,
+        )
     if candidate_scores.empty:
         raise ValueError(
-            "No candidate postcodes produced a scored result. Check postcode geocoding and postcode-to-LSOA matching."
+            "No candidate locations produced a scored result. Check postcode lookups and the selected geography."
         )
     metadata = {
+        "candidate_mode": candidate_mode,
         "geography_mode": geography_mode,
         "icb_name": icb_name,
         "index_weights": index_weights,
         "hub_score_weights": hub_score_weights,
         "catchment_radius_m": float(catchment_radius_m),
+        "suggestion_count_requested": int(suggestion_count),
+        "suggestion_min_spacing_m": float(suggestion_min_spacing_m),
+        "suggestion_one_per_neighbourhood": bool(suggestion_one_per_neighbourhood),
+        "candidate_location_note": (
+            "Suggested postcodes are representative postcodes inside high-scoring host LSOAs; "
+            "map markers use LSOA centroids."
+            if candidate_mode == "suggested"
+            else "Manual candidate postcodes use configured postcode coordinates."
+        ),
         "selected_neighbourhoods": selected_neighbourhoods or [],
         "lsoa_count": int(len(need_scores)),
         "candidate_count": int(len(candidate_scores)),
