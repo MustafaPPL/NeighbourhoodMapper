@@ -186,7 +186,7 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "OSRM public endpoint is already used in scripts/analysis/build_hub_travel_times.py — reuse the existing request pattern."
     },
     {
@@ -201,7 +201,7 @@
         "Typecheck passes"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": "R5 requires Java. The Dockerfile handles this. GTFS feeds are free from TfL data store."
     },
     {
