@@ -32,7 +32,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Remind user to supply the GP list size CSV file before running this script. The GP geocoded CSV is already in the repo."
     },
     {
