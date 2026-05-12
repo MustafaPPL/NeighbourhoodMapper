@@ -38,6 +38,7 @@ class AppConfig:
     postcode_source: str = "postcodes_io"
     postcode_coordinate_lookup_csv: Path | None = None
     postcode_api_base_url: str = "https://api.postcodes.io/postcodes"
+    qof_lsoa_csv: Path | None = None
 
 
 ICB_CHOICES = list(ICB_BOROUGHS_BY_LAD)

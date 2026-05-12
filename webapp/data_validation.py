@@ -153,6 +153,53 @@ def validate_config(config: AppConfig) -> ValidationReport:
             )
         )
 
+    _QOF_REQUIRED_COLUMNS = {
+        "LSOA_code",
+        "qof_chd_prevalence",
+        "qof_copd_prevalence",
+        "qof_diabetes_prevalence",
+        "qof_depression_prevalence",
+    }
+    if config.qof_lsoa_csv is not None:
+        if not config.qof_lsoa_csv.exists():
+            blocking_issues.append(
+                ValidationIssue(
+                    severity="error",
+                    message="QOF LSOA prevalence file is configured but does not exist.",
+                    remediation=(
+                        f"Run scripts/analysis/build_qof_lsoa.py to generate it, "
+                        f"or clear the path in Optional Data Sources. Expected: {config.qof_lsoa_csv}"
+                    ),
+                )
+            )
+        else:
+            try:
+                qof_cols = set(pd.read_csv(config.qof_lsoa_csv, nrows=0).columns.str.strip())
+                missing_cols = _QOF_REQUIRED_COLUMNS - qof_cols
+                if missing_cols:
+                    blocking_issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            message=f"QOF LSOA CSV is missing required columns: {sorted(missing_cols)}",
+                            remediation=(
+                                "Regenerate the file with scripts/analysis/build_qof_lsoa.py "
+                                "or check the file path is correct."
+                            ),
+                        )
+                    )
+                else:
+                    local_sources.append(
+                        _source_status("QOF LSOA prevalence", config.qof_lsoa_csv, "Disease need indices")
+                    )
+            except Exception as exc:
+                blocking_issues.append(
+                    ValidationIssue(
+                        severity="error",
+                        message=f"Could not read QOF LSOA CSV: {exc}",
+                        remediation="Check the file is a valid CSV and is not locked by another process.",
+                    )
+                )
+
     if config.local_lsoa_path is not None:
         local_sources.append(_source_status("Local LSOA boundaries", config.local_lsoa_path, "Spatial joins"))
     if config.postcode_coordinate_lookup_csv is not None:
