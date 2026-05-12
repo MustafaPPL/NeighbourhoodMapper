@@ -212,6 +212,32 @@ def _score_single_candidate(
     }
 
 
+def assign_travel_time_bands(
+    lsoa_codes: pd.Series,
+    host_lsoa: str,
+    travel_time_matrix: dict[tuple[str, str], float],
+) -> pd.Series:
+    """
+    Assign each LSOA a travel-time band relative to host_lsoa.
+
+    Bands: inner (0-10 min), middle (10-20 min), outer (20-30 min), beyond (>30 or no route).
+    Returns a string Series aligned to lsoa_codes index.
+    """
+    def _band(lsoa: str) -> str:
+        t = travel_time_matrix.get((host_lsoa, lsoa))
+        if t is None or pd.isna(t):
+            return "beyond"
+        if t <= 10:
+            return "inner"
+        if t <= 20:
+            return "middle"
+        if t <= 30:
+            return "outer"
+        return "beyond"
+
+    return lsoa_codes.map(_band)
+
+
 def _representative_postcodes_by_lsoa(config: AppConfig) -> pd.DataFrame:
     lookup = load_postcode_lsoa_lookup(config.postcode_lsoa_lookup_csv)
     lookup = lookup.sort_values(["LSOA_code", "postcode"]).copy()
@@ -420,6 +446,14 @@ def run_analysis(
     if candidate_scores.empty:
         raise ValueError(
             "No candidate locations produced a scored result. Check postcode lookups and the selected geography."
+        )
+    if travel_time_matrix is not None:
+        top_lsoa = str(candidate_scores.iloc[0]["LSOA_code"])
+        need_scores = need_scores.copy()
+        need_scores["travel_time_band"] = assign_travel_time_bands(
+            need_scores["LSOA_code"],
+            top_lsoa,
+            travel_time_matrix,
         )
     metadata = {
         "candidate_mode": candidate_mode,
