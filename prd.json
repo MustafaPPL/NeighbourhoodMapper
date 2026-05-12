@@ -110,7 +110,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Source data is static (Census 2021, last updated March 2023). No live API calls needed."
     },
     {
