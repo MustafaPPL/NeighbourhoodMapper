@@ -1018,122 +1018,186 @@ Hub Score =<br>
 
 
 def selected_indices_controls(config: AppConfig) -> tuple[list[str], dict[str, float], float]:
-    _INDEX_GUIDANCE: dict[str, str] = {
-        "deprivation_inverse": (
-            "Measures socioeconomic disadvantage using the Index of Multiple Deprivation (IMD). "
-            "Higher values represent greater deprivation — targets communities with the most barriers to accessing services."
-        ),
-        "population": (
-            "Total resident population of the area. Prioritises high-density neighbourhoods "
-            "where a hub would serve the most people."
-        ),
-        "population_65_plus": (
-            "Count of residents aged 65 and over. Reflects demand for services typically used by older populations, "
-            "including preventive health, social care, and community support."
-        ),
+    """Grouped need-model index selector.
+
+    Three groups (Core / Disease Prevalence / Equity: Ethnicity) each have a single
+    group-weight slider.  The group weight is distributed evenly across whichever
+    indices are ticked within that group.  All three group weights must sum to 100.
+    """
+
+    _GROUPS = [
+        {
+            "id": "core",
+            "label": "Core Need",
+            "badge": "Always available",
+            "description": "Socioeconomic deprivation and population size.",
+            "indices": ["deprivation_inverse", "population", "population_65_plus"],
+            "available_when": None,
+            "default_weight": 100,
+            "default_all_selected": True,
+        },
+        {
+            "id": "qof",
+            "label": "Disease Prevalence",
+            "badge": "QOF 2024-25",
+            "description": "Recorded GP register prevalence for four long-term conditions.",
+            "indices": [
+                "qof_chd_prevalence",
+                "qof_copd_prevalence",
+                "qof_diabetes_prevalence",
+                "qof_depression_prevalence",
+            ],
+            "available_when": "qof",
+            "default_weight": 0,
+            "default_all_selected": False,
+        },
+        {
+            "id": "ethnicity",
+            "label": "Equity: Ethnicity",
+            "badge": "Census 2021",
+            "description": (
+                "Resident proportions by ethnic group — an equity lens, not a deprivation substitute. "
+                "Include only when addressing a specific equitable-access question."
+            ),
+            "indices": [
+                "pct_asian_residents",
+                "pct_black_residents",
+                "pct_mixed_residents",
+                "pct_other_ethnic_group_residents",
+                "pct_white_other_residents",
+            ],
+            "available_when": "ethnicity",
+            "default_weight": 0,
+            "default_all_selected": False,
+        },
+    ]
+
+    _SHORT_LABELS: dict[str, str] = {
+        "deprivation_inverse": "Deprivation (IMD)",
+        "population": "Total population",
+        "population_65_plus": "65+ population",
+        "qof_chd_prevalence": "Cardiovascular (CHD)",
+        "qof_copd_prevalence": "COPD",
+        "qof_diabetes_prevalence": "Diabetes",
+        "qof_depression_prevalence": "Depression",
+        "pct_asian_residents": "Asian / Asian British",
+        "pct_black_residents": "Black / Black British",
+        "pct_mixed_residents": "Mixed / Multiple",
+        "pct_other_ethnic_group_residents": "Other ethnic group",
+        "pct_white_other_residents": "White Other",
     }
-    _DEFAULT_ENABLED = {"deprivation_inverse", "population", "population_65_plus"}
-    _DEFAULT_WEIGHTS = {"deprivation_inverse": 40, "population": 35, "population_65_plus": 25}
 
-    _QOF_UNAVAILABLE_TOOLTIP = (
-        "Enable by supplying a QOF LSOA prevalence CSV in Optional Data Sources. "
-        "Generate it with scripts/analysis/build_qof_lsoa.py."
-    )
-    _ETHNICITY_UNAVAILABLE_TOOLTIP = (
-        "Enable by supplying an ethnicity LSOA proportions CSV in Optional Data Sources. "
-        "Generate it with scripts/analysis/build_ethnicity_lsoa.py."
-    )
+    _availability: dict[str | None, bool] = {
+        None: True,
+        "qof": config.qof_lsoa_csv is not None,
+        "ethnicity": config.ethnicity_lsoa_csv is not None,
+    }
 
-    _ethnicity_entries = [name for name, defn in INDEX_DEFINITIONS.items() if defn.get("available_when") == "ethnicity"]
-    _ethnicity_available = config.ethnicity_lsoa_csv is not None
-    if _ethnicity_entries and _ethnicity_available:
-        st.info(
-            "**Ethnicity indices (Census 2021)** are an equity lens — they show where specific communities "
-            "are concentrated, not where deprivation is highest. Select only those relevant to your "
-            "planning question and weight them alongside deprivation and population indicators.",
-            icon="ℹ️",
-        )
+    def _on_select_all_change(grp_id: str, grp_indices: list[str]) -> None:
+        val = bool(st.session_state.get(f"group_all_{grp_id}", False))
+        for idx in grp_indices:
+            st.session_state[_widget_state_key(f"idx_enabled_{idx}")] = val
+            st.session_state[_persistent_state_key(f"idx_enabled_{idx}")] = val
 
     selected_indices: list[str] = []
     weights: dict[str, float] = {}
 
-    for i, (index_name, defn) in enumerate(INDEX_DEFINITIONS.items()):
-        available_when = defn.get("available_when")
-        qof_unavailable = available_when == "qof" and config.qof_lsoa_csv is None
-        ethnicity_unavailable = available_when == "ethnicity" and not _ethnicity_available
+    for g_num, group in enumerate(_GROUPS):
+        gid = group["id"]
+        available = _availability.get(group["available_when"], True)
+        indices: list[str] = group["indices"]
 
-        if i > 0:
+        if g_num > 0:
             st.markdown(
-                '<div style="border-top:1px solid #EAE3F0;margin:2px 0 6px"></div>',
+                '<div style="border-top:2px solid #EAE3F0;margin:14px 0 10px"></div>',
                 unsafe_allow_html=True,
             )
-        label_col, weight_col = st.columns([6, 4])
-        unavailable = qof_unavailable or ethnicity_unavailable
-        if unavailable:
-            unavailable_tooltip = _QOF_UNAVAILABLE_TOOLTIP if qof_unavailable else _ETHNICITY_UNAVAILABLE_TOOLTIP
-            unavailable_note = (
-                "_Requires QOF LSOA CSV — configure in Optional Data Sources._"
-                if qof_unavailable
-                else "_Requires ethnicity LSOA CSV — configure in Optional Data Sources._"
-            )
-        enabled = False
 
-        with label_col:
-            if unavailable:
-                st.checkbox(
-                    defn["label"],
-                    value=False,
-                    disabled=True,
-                    help=unavailable_tooltip,
-                    key=f"idx_disabled_{index_name}",
+        # Group header: label + badge on left, weight slider on right
+        hdr_col, wt_col = st.columns([55, 45])
+        badge_bg = "#EAE3F0" if available else "#F0EEEE"
+        badge_fg = "#490E6F" if available else "#aaa"
+        with hdr_col:
+            st.markdown(
+                f'<div style="margin-bottom:2px">'
+                f'<span style="font-size:0.82rem;font-weight:700;color:#1C0731">{group["label"]}</span> '
+                f'<span style="font-size:0.64rem;font-weight:600;background:{badge_bg};color:{badge_fg};'
+                f'padding:1px 7px;border-radius:10px;vertical-align:middle">{group["badge"]}</span>'
+                f'</div>'
+                f'<div style="font-size:0.70rem;color:#6B6078;line-height:1.35;margin-bottom:4px">'
+                f'{group["description"]}</div>',
+                unsafe_allow_html=True,
+            )
+
+        if not available:
+            st.markdown(
+                '<div style="font-size:0.72rem;color:#aaa;background:#F8F6FA;border-radius:6px;'
+                'padding:6px 10px;margin:0 0 2px">Data not configured — add source file in Optional Data Sources.</div>',
+                unsafe_allow_html=True,
+            )
+            continue
+
+        with wt_col:
+            gw_key = prepare_persisted_widget(
+                f"group_weight_{gid}", group["default_weight"], normalize=lambda v: int(v)
+            )
+            group_weight = float(
+                st.slider(
+                    "Group weight",
+                    min_value=0,
+                    max_value=100,
+                    step=5,
+                    key=gw_key,
+                    format="%d%%",
+                    label_visibility="collapsed",
                 )
-                st.caption(
-                    _INDEX_GUIDANCE.get(index_name, defn.get("description", ""))
-                    + f"  \n{unavailable_note}"
-                )
-            else:
-                enabled_key = prepare_persisted_widget(
-                    f"idx_enabled_{index_name}",
-                    index_name in _DEFAULT_ENABLED,
-                    normalize=lambda value: bool(value),
-                )
+            )
+            remember_persisted_widget(f"group_weight_{gid}")
+
+        # Select-all master toggle
+        st.checkbox(
+            "Select all",
+            key=f"group_all_{gid}",
+            value=group["default_all_selected"],
+            on_change=_on_select_all_change,
+            args=(gid, indices),
+        )
+
+        # Individual index checkboxes in a multi-column grid
+        n_cols = min(len(indices), 3)
+        cols = st.columns(n_cols)
+        selected_in_group: list[str] = []
+        for j, idx_name in enumerate(indices):
+            enabled_key = prepare_persisted_widget(
+                f"idx_enabled_{idx_name}",
+                group["default_all_selected"],
+                normalize=lambda v: bool(v),
+            )
+            with cols[j % n_cols]:
                 enabled = st.checkbox(
-                    defn["label"],
+                    _SHORT_LABELS.get(idx_name, INDEX_DEFINITIONS[idx_name]["label"]),
                     key=enabled_key,
+                    help=INDEX_DEFINITIONS[idx_name].get("description", ""),
                 )
-                remember_persisted_widget(f"idx_enabled_{index_name}")
-                st.caption(_INDEX_GUIDANCE.get(index_name, defn.get("description", "")))
-        with weight_col:
-            if unavailable:
-                st.markdown(
-                    '<div style="color:#9E9099;font-size:0.75rem;margin-top:0.4rem">Not available — data not configured</div>',
-                    unsafe_allow_html=True,
-                )
-            elif enabled:
-                weight_key = prepare_persisted_widget(
-                    f"weight_{index_name}",
-                    _DEFAULT_WEIGHTS.get(index_name, 0),
-                    normalize=lambda value: int(value),
-                )
-                weight = float(
-                    st.slider(
-                        "Weight",
-                        min_value=0,
-                        max_value=100,
-                        step=5,
-                        key=weight_key,
-                        format="%d%%",
-                        label_visibility="collapsed",
-                    )
-                )
-                remember_persisted_widget(f"weight_{index_name}")
-                selected_indices.append(index_name)
-                weights[index_name] = weight
-            else:
-                st.markdown(
-                    '<div style="color:#9E9099;font-size:0.75rem;margin-top:0.4rem">Not included in scoring</div>',
-                    unsafe_allow_html=True,
-                )
+            remember_persisted_widget(f"idx_enabled_{idx_name}")
+            if enabled:
+                selected_in_group.append(idx_name)
+
+        # Distribute group weight evenly; show feedback
+        if selected_in_group and group_weight > 0:
+            per_w = group_weight / len(selected_in_group)
+            for idx in selected_in_group:
+                selected_indices.append(idx)
+                weights[idx] = per_w
+            n = len(selected_in_group)
+            st.caption(
+                f"{n} index{'es' if n != 1 else ''} selected "
+                f"— {per_w:.1f}pts each from this group's {int(group_weight)}pt allocation."
+            )
+        elif not selected_in_group:
+            st.caption("No indices selected — tick at least one to use this group.")
+        else:
+            st.caption("Group weight is 0 — move the slider to include this group in scoring.")
 
     total_weight = sum(weights.values())
 
@@ -1141,16 +1205,17 @@ def selected_indices_controls(config: AppConfig) -> tuple[list[str], dict[str, f
         '<div style="border-top:1px solid #EAE3F0;margin:8px 0 4px"></div>',
         unsafe_allow_html=True,
     )
-    if total_weight == 100:
+    _weights_ok = abs(total_weight - 100) < 0.5
+    if _weights_ok:
         total_color, total_suffix = "#1a7a3f", "Ready to run ✓"
     elif total_weight > 100:
-        total_color, total_suffix = "#350355", f"Over by {int(total_weight - 100)} — reduce weights to continue"
+        total_color, total_suffix = "#350355", f"Over by {round(total_weight - 100):.0f} — reduce group weights to continue"
     else:
-        total_color, total_suffix = "#490E6F", f"{int(100 - total_weight)} remaining — allocate all 100 points to continue"
+        total_color, total_suffix = "#490E6F", f"{round(100 - total_weight):.0f} remaining — allocate all 100 points to continue"
     st.markdown(
         f'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">'
         f'<span style="font-size:0.78rem;color:{total_color}">{total_suffix}</span>'
-        f'<span style="font-size:1rem;font-weight:700;color:{total_color}">{int(total_weight)} / 100</span>'
+        f'<span style="font-size:1rem;font-weight:700;color:{total_color}">{round(total_weight):.0f} / 100</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1853,7 +1918,7 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     st.subheader("Need Model")
     st.caption(
         "Select which indicators to include and set their weighting. "
-        "Weights must sum to exactly 100. Each indicator is min-max scaled within the selected geography before weighting."
+        "Group weights must sum to 100. The group allocation is split evenly across selected indices within each group. Each index is min-max scaled within the selected geography before weighting."
     )
     selected_indices, weights, total_weight = selected_indices_controls(config)
 
@@ -1940,11 +2005,11 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     report_can_run = report.can_run_analysis if candidate_mode == "manual" else report.can_run_candidate_discovery
     can_run = (
         bool(selected_indices)
-        and total_weight == 100
+        and abs(total_weight - 100) < 0.5
         and report_can_run
         and (candidate_mode == "suggested" or bool(candidate_postcodes))
     )
-    if total_weight != 100:
+    if abs(total_weight - 100) >= 0.5:
         st.error("Weights must sum to 100 before analysis can run.")
     if not selected_indices:
         st.error("Select at least one index.")
