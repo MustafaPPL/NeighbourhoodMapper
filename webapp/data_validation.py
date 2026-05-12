@@ -250,6 +250,43 @@ def validate_config(config: AppConfig) -> ValidationReport:
                     )
                 )
 
+    if config.travel_mode == "walking":
+        if config.walking_matrix_path is None or not config.walking_matrix_path.exists():
+            blocking_issues.append(
+                ValidationIssue(
+                    severity="error",
+                    message="Walking travel-time matrix is required for walking mode but is not configured or missing.",
+                    remediation=(
+                        "Run scripts/analysis/build_travel_time_matrix.py --mode walking "
+                        "to generate data/cache/travel_time_walking.parquet, "
+                        "then set the path in Optional Data Sources."
+                    ),
+                )
+            )
+        else:
+            local_sources.append(
+                _source_status("Walking travel-time matrix", config.walking_matrix_path, "Walking catchment scoring")
+            )
+    elif config.travel_mode == "transit":
+        if config.transit_matrix_path is None or not config.transit_matrix_path.exists():
+            blocking_issues.append(
+                ValidationIssue(
+                    severity="error",
+                    message="Transit travel-time matrix is required for transit mode but is not configured or missing.",
+                    remediation=(
+                        "Run the R5 Docker job in scripts/analysis/r5/ "
+                        "to generate data/cache/travel_time_transit.parquet, "
+                        "then set the path in Optional Data Sources."
+                    ),
+                )
+            )
+        else:
+            local_sources.append(
+                _source_status(
+                    "Transit travel-time matrix", config.transit_matrix_path, "Transit catchment scoring"
+                )
+            )
+
     if config.local_lsoa_path is not None:
         local_sources.append(_source_status("Local LSOA boundaries", config.local_lsoa_path, "Spatial joins"))
     if config.postcode_coordinate_lookup_csv is not None:

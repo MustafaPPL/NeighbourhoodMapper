@@ -40,6 +40,9 @@ class AppConfig:
     postcode_api_base_url: str = "https://api.postcodes.io/postcodes"
     qof_lsoa_csv: Path | None = None
     ethnicity_lsoa_csv: Path | None = None
+    travel_mode: str = "straight_line"
+    walking_matrix_path: Path | None = None
+    transit_matrix_path: Path | None = None
 
 
 ICB_CHOICES = list(ICB_BOROUGHS_BY_LAD)
