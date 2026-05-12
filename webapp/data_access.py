@@ -43,6 +43,15 @@ def detect_column(columns: Iterable[str], candidates: list[str]) -> str | None:
     return None
 
 
+_ETHNICITY_COLUMNS = [
+    "LSOA_code",
+    "pct_asian_residents",
+    "pct_black_residents",
+    "pct_mixed_residents",
+    "pct_other_ethnic_group_residents",
+    "pct_white_other_residents",
+]
+
 _QOF_COLUMNS = [
     "LSOA_code",
     "qof_chd_prevalence",
@@ -50,6 +59,18 @@ _QOF_COLUMNS = [
     "qof_diabetes_prevalence",
     "qof_depression_prevalence",
 ]
+
+
+def load_ethnicity_data(path: Path) -> pd.DataFrame:
+    """Return ethnicity LSOA proportions dataframe with LSOA_code and five proportion columns."""
+    df = pd.read_csv(path, dtype={"LSOA_code": str})
+    df.columns = df.columns.str.strip()
+    missing = [col for col in _ETHNICITY_COLUMNS if col not in df.columns]
+    if missing:
+        raise ValueError(f"Ethnicity CSV is missing required columns: {missing}. Found: {list(df.columns)}")
+    for col in _ETHNICITY_COLUMNS[1:]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df.loc[:, _ETHNICITY_COLUMNS].dropna(subset=["LSOA_code"]).drop_duplicates("LSOA_code")
 
 
 def load_qof_data(path: Path) -> pd.DataFrame:
@@ -81,6 +102,10 @@ def load_need_inputs(config: AppConfig) -> pd.DataFrame:
     if config.qof_lsoa_csv is not None:
         qof = load_qof_data(config.qof_lsoa_csv)
         merged = merged.merge(qof, on="LSOA_code", how="left", validate="1:1")
+
+    if config.ethnicity_lsoa_csv is not None:
+        ethnicity = load_ethnicity_data(config.ethnicity_lsoa_csv)
+        merged = merged.merge(ethnicity, on="LSOA_code", how="left", validate="1:1")
 
     return merged
 
