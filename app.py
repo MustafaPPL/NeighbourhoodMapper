@@ -1960,11 +1960,27 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
             st.error(str(exc))
 
 
+_BAND_FILL = {
+    "inner": "#22c55e",
+    "middle": "#f59e0b",
+    "outer": "#ef4444",
+    "beyond": "#9ca3af",
+}
+_BAND_LABEL = {
+    "inner": "Inner (0–10 min)",
+    "middle": "Middle (10–20 min)",
+    "outer": "Outer (20–30 min)",
+    "beyond": "Beyond 30 min / no route",
+}
+
+
 def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None = None) -> folium.Map:
     need_scores = result.need_scores.to_crs(4326)
     candidates = result.candidate_scores.to_crs(4326)
     valid_need_scores = need_scores[need_scores.geometry.notna() & (~need_scores.geometry.is_empty)].copy()
     valid_candidates = candidates[candidates.geometry.notna() & (~candidates.geometry.is_empty)].copy()
+
+    travel_band_mode = "travel_time_band" in valid_need_scores.columns
 
     if valid_need_scores.empty:
         return folium.Map(location=[51.5074, -0.1278], zoom_start=10, tiles="CartoDB positron")
@@ -1974,29 +1990,69 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
     centre = gpd.GeoSeries(centre_geom, crs=27700).to_crs(4326).iloc[0]
     fmap = folium.Map(location=[float(centre.y), float(centre.x)], zoom_start=10, tiles="CartoDB positron")
 
-    colormap = linear.YlOrRd_09.scale(
-        float(valid_need_scores["need_score_pct"].min()),
-        float(valid_need_scores["need_score_pct"].max()),
-    )
-    colormap.caption = "Need Score"
-    colormap.add_to(fmap)
-
-    folium.GeoJson(
-        valid_need_scores.loc[:, ["LSOA_code", "need_score_pct", "geometry"]].to_json(),
-        style_function=lambda feature: {
-            "fillColor": colormap(feature["properties"]["need_score_pct"])
-            if feature["properties"]["need_score_pct"] is not None
-            else "#cccccc",
-            "color": "#666666",
-            "weight": 0.3,
-            "fillOpacity": 0.7 if feature["properties"]["need_score_pct"] is not None else 0.0,
-        },
-        tooltip=folium.GeoJsonTooltip(
-            fields=["LSOA_code", "need_score_pct"],
-            aliases=["LSOA", "Need Score"],
-            localize=True,
-        ),
-    ).add_to(fmap)
+    if travel_band_mode:
+        valid_need_scores["_band_fill"] = valid_need_scores["travel_time_band"].map(
+            lambda b: _BAND_FILL.get(str(b), _BAND_FILL["beyond"])
+        )
+        valid_need_scores["_band_label"] = valid_need_scores["travel_time_band"].map(
+            lambda b: _BAND_LABEL.get(str(b), _BAND_LABEL["beyond"])
+        )
+        folium.GeoJson(
+            valid_need_scores.loc[
+                :, ["LSOA_code", "need_score_pct", "travel_time_band", "_band_fill", "_band_label", "geometry"]
+            ].to_json(),
+            style_function=lambda feature: {
+                "fillColor": feature["properties"]["_band_fill"] or _BAND_FILL["beyond"],
+                "color": "#666666",
+                "weight": 0.3,
+                "fillOpacity": 0.65,
+            },
+            tooltip=folium.GeoJsonTooltip(
+                fields=["LSOA_code", "_band_label", "need_score_pct"],
+                aliases=["LSOA", "Travel time band", "Need Score"],
+                localize=True,
+            ),
+        ).add_to(fmap)
+        legend_html = (
+            '<div style="position:fixed;bottom:30px;left:30px;z-index:9999;background:#fff;'
+            'padding:10px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-family:sans-serif;font-size:13px">'
+            "<b>Travel time from hub</b><br>"
+            + "".join(
+                f'<span style="display:inline-block;width:14px;height:14px;background:{color};'
+                f'border-radius:3px;margin-right:6px;vertical-align:middle"></span>{label}<br>'
+                for color, label in [
+                    (_BAND_FILL["inner"], _BAND_LABEL["inner"]),
+                    (_BAND_FILL["middle"], _BAND_LABEL["middle"]),
+                    (_BAND_FILL["outer"], _BAND_LABEL["outer"]),
+                    (_BAND_FILL["beyond"], _BAND_LABEL["beyond"]),
+                ]
+            )
+            + "</div>"
+        )
+        fmap.get_root().html.add_child(folium.Element(legend_html))
+    else:
+        colormap = linear.YlOrRd_09.scale(
+            float(valid_need_scores["need_score_pct"].min()),
+            float(valid_need_scores["need_score_pct"].max()),
+        )
+        colormap.caption = "Need Score"
+        colormap.add_to(fmap)
+        folium.GeoJson(
+            valid_need_scores.loc[:, ["LSOA_code", "need_score_pct", "geometry"]].to_json(),
+            style_function=lambda feature: {
+                "fillColor": colormap(feature["properties"]["need_score_pct"])
+                if feature["properties"]["need_score_pct"] is not None
+                else "#cccccc",
+                "color": "#666666",
+                "weight": 0.3,
+                "fillOpacity": 0.7 if feature["properties"]["need_score_pct"] is not None else 0.0,
+            },
+            tooltip=folium.GeoJsonTooltip(
+                fields=["LSOA_code", "need_score_pct"],
+                aliases=["LSOA", "Need Score"],
+                localize=True,
+            ),
+        ).add_to(fmap)
 
     if "nghbrhd" in valid_need_scores.columns:
         neighbourhood_boundaries = (
@@ -2036,7 +2092,7 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
             ),
             max_width=260,
         )
-        if pd.notna(catchment_radius_val) and catchment_radius_val > 0:
+        if not travel_band_mode and pd.notna(catchment_radius_val) and catchment_radius_val > 0:
             folium.Circle(
                 location=[row.geometry.y, row.geometry.x],
                 radius=float(catchment_radius_val),
