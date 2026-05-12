@@ -61,6 +61,23 @@ _QOF_COLUMNS = [
 ]
 
 
+def load_travel_time_matrix(path: Path | None) -> dict[tuple[str, str], float] | None:
+    """
+    Load a pre-computed LSOA travel-time parquet into a dict keyed by (origin, destination).
+
+    Returns None if path is None or the file does not exist (caller should fall back to
+    straight-line mode). Intended to be called once per analysis run and cached by the caller.
+    """
+    if path is None or not path.exists():
+        return None
+    df = pd.read_parquet(path, columns=["origin_lsoa", "destination_lsoa", "travel_time_minutes"])
+    valid = df.dropna(subset=["travel_time_minutes"])
+    return {
+        (row.origin_lsoa, row.destination_lsoa): float(row.travel_time_minutes)
+        for row in valid.itertuples(index=False)
+    }
+
+
 def load_ethnicity_data(path: Path) -> pd.DataFrame:
     """Return ethnicity LSOA proportions dataframe with LSOA_code and five proportion columns."""
     df = pd.read_csv(path, dtype={"LSOA_code": str})
