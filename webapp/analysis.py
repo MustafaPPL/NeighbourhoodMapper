@@ -34,6 +34,30 @@ INDEX_DEFINITIONS = {
         "source_column": "population_65_plus",
         "description": "Residents aged 65 years and over.",
     },
+    "qof_chd_prevalence": {
+        "label": "Cardiovascular disease prevalence (QOF 2024-25)",
+        "source_column": "qof_chd_prevalence",
+        "description": "Crude prevalence rate (%) for the QOF Coronary Heart Disease (CHD) register, averaged across the top-5 nearest GP practices weighted by list size.",
+        "available_when": "qof",
+    },
+    "qof_copd_prevalence": {
+        "label": "COPD prevalence (QOF 2024-25)",
+        "source_column": "qof_copd_prevalence",
+        "description": "Crude prevalence rate (%) for the QOF Chronic Obstructive Pulmonary Disease (COPD) register, averaged across the top-5 nearest GP practices weighted by list size.",
+        "available_when": "qof",
+    },
+    "qof_diabetes_prevalence": {
+        "label": "Diabetes prevalence (QOF 2024-25)",
+        "source_column": "qof_diabetes_prevalence",
+        "description": "Crude prevalence rate (%) for the QOF Diabetes Mellitus (DM) register, averaged across the top-5 nearest GP practices weighted by list size.",
+        "available_when": "qof",
+    },
+    "qof_depression_prevalence": {
+        "label": "Depression prevalence (QOF 2024-25)",
+        "source_column": "qof_depression_prevalence",
+        "description": "Crude prevalence rate (%) for the QOF Depression (DEP) register, averaged across the top-5 nearest GP practices weighted by list size.",
+        "available_when": "qof",
+    },
 }
 
 DEFAULT_HUB_SCORE_WEIGHTS = {

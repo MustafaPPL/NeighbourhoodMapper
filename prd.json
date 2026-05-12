@@ -77,7 +77,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "available_when='qof' is a new convention — it flags which optional data source must be present. The UI story (US-006) reads this to grey out controls."
     },
     {
