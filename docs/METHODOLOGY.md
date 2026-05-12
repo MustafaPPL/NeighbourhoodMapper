@@ -96,3 +96,92 @@ If the host LSOA has no valid Need Score, the Hub Score is null and the candidat
 - **Single LSOA host assignment** — a candidate postcode is assigned to exactly one host LSOA. If the postcode sits on a boundary the first match in the lookup table wins.
 - **No estate or accessibility checks** — the Hub Score reflects population need only. It does not account for transport links, building availability, clinical suitability, or existing service catchments.
 - **Outputs are decision-support only** — they do not replace local service planning, estate checks, or clinical judgement.
+
+---
+
+## QOF Disease Prevalence Indices
+
+Four optional disease prevalence indices can be included in the Need Model:
+
+| Index | QOF Register |
+|---|---|
+| Cardiovascular disease (CHD) | Coronary Heart Disease register |
+| COPD | Chronic Obstructive Pulmonary Disease register |
+| Diabetes | Diabetes Mellitus (DM) register |
+| Depression | Depression (DEP) register |
+
+**Data source:** NHS Quality and Outcomes Framework (QOF) 2024-25, practice-level register size data.
+
+**Attribution method:** For each LSOA, the top-5 nearest GP practices are identified by straight-line distance from the LSOA centroid (no hard cutoff, so every LSOA receives a non-null value). Each practice is weighted by `list_size / distance_km²`. The LSOA-level prevalence is the weighted mean of the practice-level crude prevalence rates (%) across the top-5 practices.
+
+**Caveat:** QOF prevalence is *recorded* prevalence on the GP register, not epidemiological prevalence. It reflects diagnostic activity and registration patterns as much as underlying disease burden. Use alongside — not instead of — deprivation and population indices.
+
+**Prepared by:** `scripts/analysis/build_qof_lsoa.py` → `data/cache/qof_lsoa_2024-25.csv`
+
+---
+
+## Ethnicity Equity Indices
+
+Five optional ethnicity proportion fields can be included in the Need Model:
+
+| Field | ONS TS021 group mapping |
+|---|---|
+| `pct_asian_residents` | Asian, Asian British or Asian Welsh |
+| `pct_black_residents` | Black, Black British, Black Welsh, Caribbean or African |
+| `pct_mixed_residents` | Mixed or Multiple ethnic groups |
+| `pct_other_ethnic_group_residents` | Other ethnic group |
+| `pct_white_other_residents` | White: Other White (excludes British, Irish, and Gypsy or Irish Traveller) |
+
+**Data source:** ONS Census 2021, table TS021 (*Ethnic group*), downloaded from Nomis (reference C2021TS021). Each proportion is the count in that group divided by the total usual resident population of the LSOA, clamped to [0, 1].
+
+**Important caveat:** These fields are an **equity lens**, not a deprivation substitute. They indicate the share of residents from specific communities and should only be included when there is a specific planning question about equitable access for those communities. Selecting these indices does not imply that any ethnic group has inherently higher need.
+
+**Prepared by:** `scripts/analysis/build_ethnicity_lsoa.py` → `data/cache/ethnicity_lsoa_2021.csv`
+
+---
+
+## Travel-Time Catchments
+
+When a routed travel mode is selected, the straight-line catchment radius is replaced by a pre-computed travel-time matrix. Two modes are available:
+
+| Mode | Routing engine | Notes |
+|---|---|---|
+| Walking | OSRM (Open Source Routing Machine) | Public endpoint `router.project-osrm.org`, foot profile |
+| Public transport | R5 (Conveyal) with London GTFS | Departure: Tuesday 10:00 am (representative off-peak AM) |
+
+**GTFS feeds used for transit:** TfL Bus GTFS, TfL Tube/Rail GTFS, Elizabeth line, and National Rail feeds covering Greater London.
+
+**Scoring formula:** Each LSOA in the catchment receives a time-decay weight:
+
+```
+weight = max(0, 1 − travel_time_minutes / 30)
+```
+
+LSOAs with travel time > 30 minutes receive weight 0 and are excluded from the catchment mean. This replaces the straight-line distance-decay formula used in the default mode.
+
+**Band thresholds (map colouring):**
+
+| Band | Travel time | Map colour |
+|---|---|---|
+| Inner | 0–10 min | Green |
+| Middle | 10–20 min | Amber |
+| Outer | 20–30 min | Red |
+| Beyond | > 30 min or no route | Grey |
+
+Band colours are assigned relative to the top-ranked candidate hub's host LSOA.
+
+**Prepared by:** `scripts/analysis/build_travel_time_matrix.py --mode walking|transit`
+
+---
+
+## Estate Availability Flags
+
+When an ERIC geocoded sites file is configured, each candidate hub location is checked for proximity to NHS estate.
+
+**Data source:** Estates Returns Information Collection (ERIC) 2024/25, NHS England. Covers NHS trust-owned sites across England; filtered to London trusts by organisation code prefix and trust name.
+
+**Geocoding method:** Site postcodes are geocoded via the Postcodes.io API. If the ERIC CSV includes non-null latitude/longitude columns, those are used directly without an API call. Results are cached to avoid re-geocoding on repeated runs.
+
+**Proximity calculation:** Distances are computed in British National Grid (EPSG:27700). The default search radius is **1 km** (configurable via the Settings sidebar, range 500 m – 2 km). A candidate is flagged as having nearby NHS estate if at least one site centroid falls within the search radius.
+
+**Important:** Estate proximity flags are **informational only**. They do not affect the numeric Hub Score. A high Hub Score with nearby estate is a strong candidate for further feasibility assessment; a high score without estate nearby may indicate a greenfield opportunity.
