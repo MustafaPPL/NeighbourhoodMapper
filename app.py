@@ -2246,8 +2246,39 @@ def render_outputs_page() -> None:
     if not estate_configured:
         st.caption("Estate proximity not available — configure ERIC data in Settings.")
 
-    csv_bytes = table.to_csv(index=False).encode("utf-8")
-    st.download_button("Download results as CSV", data=csv_bytes, file_name="hub_candidates.csv", mime="text/csv")
+    dl_col, meta_col = st.columns(2, gap="small")
+    with dl_col:
+        csv_bytes = table.to_csv(index=False).encode("utf-8")
+        st.download_button("Download results as CSV", data=csv_bytes, file_name="hub_candidates.csv", mime="text/csv")
+    with meta_col:
+        import json as _json
+        metadata_bytes = _json.dumps(result.metadata, indent=2, default=str).encode("utf-8")
+        st.download_button(
+            "Download run metadata as JSON",
+            data=metadata_bytes,
+            file_name="hub_candidates_metadata.json",
+            mime="application/json",
+        )
+
+    with st.expander("Run metadata", expanded=False):
+        _meta_display = {
+            "Generated at": result.metadata.get("generated_at"),
+            "Travel mode": result.metadata.get("travel_mode"),
+            "QOF active": result.metadata.get("qof_active"),
+            "QOF year": result.metadata.get("qof_year"),
+            "QOF attribution": result.metadata.get("qof_attribution_method"),
+            "Ethnicity active": result.metadata.get("ethnicity_active"),
+            "Ethnicity source": result.metadata.get("ethnicity_source"),
+            "Estate active": result.metadata.get("estate_active"),
+            "Estate dataset": result.metadata.get("estate_dataset"),
+            "Estate search radius": f"{result.metadata.get('estate_search_radius_m')} m",
+            "Catchment radius": f"{result.metadata.get('catchment_radius_m')} m"
+            if result.metadata.get("travel_mode") == "straight_line"
+            else "N/A (routed mode)",
+            "Index weights": result.metadata.get("index_weights"),
+        }
+        for key, value in _meta_display.items():
+            st.markdown(f"**{key}:** {value}")
 
 
 def render_methodology_page() -> None:
