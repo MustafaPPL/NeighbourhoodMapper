@@ -106,22 +106,27 @@ def _geocode_postcode(postcode: str) -> tuple[float, float] | None:
 
 
 def load_eric_csv(path: Path) -> pd.DataFrame:
-    df = pd.read_csv(path, dtype=str, low_memory=False)
+    df = pd.read_csv(path, dtype=str, low_memory=False, encoding="latin-1")
     df.columns = df.columns.str.strip()
     return df
 
 
 def filter_london_sites(df: pd.DataFrame) -> pd.DataFrame:
-    org_col = _detect_col(list(df.columns), ["org_code", "organisation_code", "OrganisationCode", "OrgCode"])
-    trust_col = _detect_col(list(df.columns), ["trust_name", "TrustName", "organisation_name", "OrganisationName"])
+    # Try filtering by Commissioning Region first (most reliable for ERIC format)
+    region_col = _detect_col(list(df.columns), ["commissioning region", "region"])
+    if region_col and df[region_col].str.contains("LONDON", case=False, na=False).any():
+        return df[df[region_col].str.contains("LONDON", case=False, na=False)].copy()
+
+    org_col = _detect_col(list(df.columns), ["trust code", "org_code", "organisation_code", "OrganisationCode", "OrgCode"])
+    trust_col = _detect_col(list(df.columns), ["trust name", "trust_name", "TrustName", "organisation_name", "OrganisationName"])
     mask = df.apply(lambda row: _is_london_row(row, org_col, trust_col), axis=1)
     return df[mask].copy()
 
 
 def build_geocoded(df: pd.DataFrame, cache_path: Path | None = None) -> pd.DataFrame:
-    site_col = _detect_col(list(df.columns), ["site_name", "SiteName", "site name"])
-    trust_col = _detect_col(list(df.columns), ["trust_name", "TrustName", "organisation_name", "OrganisationName"])
-    postcode_col = _detect_col(list(df.columns), ["site_postcode", "SitePostcode", "postcode", "Postcode"])
+    site_col = _detect_col(list(df.columns), ["site name", "site_name", "SiteName"])
+    trust_col = _detect_col(list(df.columns), ["trust name", "trust_name", "TrustName", "organisation_name", "OrganisationName"])
+    postcode_col = _detect_col(list(df.columns), ["post code", "site_postcode", "SitePostcode", "postcode", "Postcode"])
     lat_col = _detect_col(list(df.columns), ["latitude", "Latitude", "lat"])
     lon_col = _detect_col(list(df.columns), ["longitude", "Longitude", "lon", "long"])
 
