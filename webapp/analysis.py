@@ -9,8 +9,10 @@ from webapp.config import AppConfig, BRITISH_NATIONAL_GRID
 from webapp.data_access import (
     annotate_lsoa_geography,
     assign_candidates_to_lsoa,
+    compute_estate_proximity,
     filter_scope,
     geocode_candidate_postcodes,
+    load_estate_sites,
     load_lsoa_boundaries,
     load_need_inputs,
     load_neighbourhoods,
@@ -280,6 +282,25 @@ def _select_spaced_suggestions(
     return scored_bng.loc[selected_indices].copy()
 
 
+def _add_estate_proximity_columns(
+    scored_bng: gpd.GeoDataFrame,
+    estate_sites: gpd.GeoDataFrame | None,
+    radius_m: int,
+) -> gpd.GeoDataFrame:
+    if estate_sites is None:
+        return scored_bng
+    wgs84 = scored_bng.to_crs("EPSG:4326")
+    proximity_rows = [
+        compute_estate_proximity(row.geometry.y, row.geometry.x, estate_sites, radius_m)
+        for _, row in wgs84.iterrows()
+    ]
+    proximity_df = pd.DataFrame(proximity_rows, index=scored_bng.index)
+    for col in proximity_df.columns:
+        scored_bng = scored_bng.copy()
+        scored_bng[col] = proximity_df[col]
+    return scored_bng
+
+
 def suggest_candidate_hubs(
     need_scores: gpd.GeoDataFrame,
     config: AppConfig,
@@ -289,6 +310,7 @@ def suggest_candidate_hubs(
     min_spacing_m: float = DEFAULT_SUGGESTION_MIN_SPACING_M,
     one_per_neighbourhood: bool = True,
     travel_time_matrix: dict[tuple[str, str], float] | None = None,
+    estate_sites: gpd.GeoDataFrame | None = None,
 ) -> gpd.GeoDataFrame:
     need_columns = [
         column
@@ -329,6 +351,7 @@ def suggest_candidate_hubs(
         pd.to_numeric(scored["weighted_catchment_need_score"], errors="coerce") * 100
     ).round(2)
     scored_bng = gpd.GeoDataFrame(scored, geometry=candidates.geometry.reset_index(drop=True), crs=BRITISH_NATIONAL_GRID)
+    scored_bng = _add_estate_proximity_columns(scored_bng, estate_sites, config.estate_search_radius_m)
     scored_bng = scored_bng.sort_values(
         ["hub_score", "host_need_score", "need_score"],
         ascending=[False, False, False],
@@ -351,6 +374,7 @@ def rank_candidate_hubs(
     hub_score_weights: dict[str, float],
     catchment_radius_m: float,
     travel_time_matrix: dict[tuple[str, str], float] | None = None,
+    estate_sites: gpd.GeoDataFrame | None = None,
 ) -> tuple[gpd.GeoDataFrame, list[str], list[str]]:
     geocoded = geocode_candidate_postcodes(candidate_postcodes, config)
     assigned, unresolved = assign_candidates_to_lsoa(geocoded.candidates, need_scores, config)
@@ -377,10 +401,12 @@ def rank_candidate_hubs(
     scored["candidate_source"] = "User supplied postcode"
     scored["coordinate_source"] = scored.get("geocode_source", "Configured postcode geocoder")
     scored["is_suggested"] = False
-    scored = scored.sort_values(["hub_score", "host_need_score"], ascending=[False, False]).reset_index(drop=True)
-    scored["rank"] = scored.index + 1
+    scored_gdf = gpd.GeoDataFrame(scored, geometry=assigned.geometry.reset_index(drop=True), crs=assigned.crs)
+    scored_gdf = _add_estate_proximity_columns(scored_gdf, estate_sites, config.estate_search_radius_m)
+    scored_gdf = scored_gdf.sort_values(["hub_score", "host_need_score"], ascending=[False, False]).reset_index(drop=True)
+    scored_gdf["rank"] = scored_gdf.index + 1
     return (
-        gpd.GeoDataFrame(scored, geometry=assigned.geometry.reset_index(drop=True), crs=assigned.crs),
+        scored_gdf,
         geocoded.invalid_postcodes,
         unresolved,
     )
@@ -406,6 +432,7 @@ def run_analysis(
         else None
     )
     travel_time_matrix = load_travel_time_matrix(matrix_path)
+    estate_sites = load_estate_sites(config.eric_geocoded_csv) if config.eric_geocoded_csv is not None else None
 
     need_scores = build_need_scores(config, geography_mode, icb_name, index_weights, selected_neighbourhoods)
     if need_scores.empty:
@@ -428,6 +455,7 @@ def run_analysis(
             min_spacing_m=suggestion_min_spacing_m,
             one_per_neighbourhood=suggestion_one_per_neighbourhood,
             travel_time_matrix=travel_time_matrix,
+            estate_sites=estate_sites,
         )
         invalid_postcodes: list[str] = []
         unresolved_postcodes: list[str] = []
@@ -442,6 +470,7 @@ def run_analysis(
             hub_score_weights,
             catchment_radius_m,
             travel_time_matrix=travel_time_matrix,
+            estate_sites=estate_sites,
         )
     if candidate_scores.empty:
         raise ValueError(

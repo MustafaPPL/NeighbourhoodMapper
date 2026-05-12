@@ -2105,14 +2105,24 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
         catchment_radius_val = pd.to_numeric(pd.Series([row.get("catchment_radius_m")]), errors="coerce").iloc[0]
         candidate_source = row.get("candidate_source", "Candidate postcode")
         rank_val = int(row["rank"]) if pd.notna(row.get("rank")) else 999
+        estate_flag = row.get("nearby_nhs_estate_flag")
+        estate_line = ""
+        if estate_flag is True:
+            nearest_name = row.get("nearest_estate_name") or ""
+            nearest_dist = row.get("nearest_estate_distance_m")
+            dist_str = f" ({nearest_dist:.0f} m)" if nearest_dist is not None else ""
+            estate_line = f"<br>NHS estate nearby: {nearest_name}{dist_str}"
+        elif estate_flag is False:
+            estate_line = "<br>No NHS estate within search radius"
         popup = folium.Popup(
             html=(
                 f"<strong>#{rank_val} — {row['postcode']}</strong><br>"
                 f"{candidate_source}<br>"
                 f"Hub Score: {hub_score_label}<br>"
                 f"Host LSOA: {row['LSOA_code']}"
+                f"{estate_line}"
             ),
-            max_width=260,
+            max_width=300,
         )
         if not travel_band_mode and pd.notna(catchment_radius_val) and catchment_radius_val > 0:
             folium.Circle(
@@ -2213,7 +2223,10 @@ def render_outputs_page() -> None:
             st.caption(note)
 
     table = result.candidate_scores.drop(columns="geometry").copy()
+    estate_configured = "nearby_nhs_estate_flag" in table.columns
     display_columns = ["rank", "postcode", "hub_score_pct", "borough", "nghbrhd"]
+    if estate_configured:
+        display_columns += ["nearby_nhs_estate_flag", "nearest_estate_name", "nearest_estate_distance_m"]
     available_columns = [c for c in display_columns if c in table.columns]
     st.dataframe(
         table.loc[:, available_columns].sort_values("rank") if "rank" in table.columns else table.loc[:, available_columns],
@@ -2225,8 +2238,16 @@ def render_outputs_page() -> None:
             "hub_score_pct": st.column_config.NumberColumn("Hub Score", format="%.1f"),
             "borough": st.column_config.TextColumn("Borough"),
             "nghbrhd": st.column_config.TextColumn("Neighbourhood"),
+            "nearby_nhs_estate_flag": st.column_config.CheckboxColumn("NHS Estate nearby"),
+            "nearest_estate_name": st.column_config.TextColumn("Nearest estate site"),
+            "nearest_estate_distance_m": st.column_config.NumberColumn("Distance to estate (m)", format="%.0f m"),
         },
     )
+    if not estate_configured:
+        st.caption("Estate proximity not available — configure ERIC data in Settings.")
+
+    csv_bytes = table.to_csv(index=False).encode("utf-8")
+    st.download_button("Download results as CSV", data=csv_bytes, file_name="hub_candidates.csv", mime="text/csv")
 
 
 def render_methodology_page() -> None:
