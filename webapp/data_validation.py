@@ -200,6 +200,56 @@ def validate_config(config: AppConfig) -> ValidationReport:
                     )
                 )
 
+    _ETHNICITY_REQUIRED_COLUMNS = {
+        "LSOA_code",
+        "pct_asian_residents",
+        "pct_black_residents",
+        "pct_mixed_residents",
+        "pct_other_ethnic_group_residents",
+        "pct_white_other_residents",
+    }
+    if config.ethnicity_lsoa_csv is not None:
+        if not config.ethnicity_lsoa_csv.exists():
+            blocking_issues.append(
+                ValidationIssue(
+                    severity="error",
+                    message="Ethnicity LSOA proportions file is configured but does not exist.",
+                    remediation=(
+                        f"Run scripts/analysis/build_ethnicity_lsoa.py to generate it, "
+                        f"or clear the path in Optional Data Sources. Expected: {config.ethnicity_lsoa_csv}"
+                    ),
+                )
+            )
+        else:
+            try:
+                eth_cols = set(pd.read_csv(config.ethnicity_lsoa_csv, nrows=0).columns.str.strip())
+                missing_cols = _ETHNICITY_REQUIRED_COLUMNS - eth_cols
+                if missing_cols:
+                    blocking_issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            message=f"Ethnicity LSOA CSV is missing required columns: {sorted(missing_cols)}",
+                            remediation=(
+                                "Regenerate the file with scripts/analysis/build_ethnicity_lsoa.py "
+                                "or check the file path is correct."
+                            ),
+                        )
+                    )
+                else:
+                    local_sources.append(
+                        _source_status(
+                            "Ethnicity LSOA proportions", config.ethnicity_lsoa_csv, "Ethnicity equity indices"
+                        )
+                    )
+            except Exception as exc:
+                blocking_issues.append(
+                    ValidationIssue(
+                        severity="error",
+                        message=f"Could not read ethnicity LSOA CSV: {exc}",
+                        remediation="Check the file is a valid CSV and is not locked by another process.",
+                    )
+                )
+
     if config.local_lsoa_path is not None:
         local_sources.append(_source_status("Local LSOA boundaries", config.local_lsoa_path, "Spatial joins"))
     if config.postcode_coordinate_lookup_csv is not None:
