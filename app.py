@@ -960,8 +960,8 @@ Hub Score =<br>
     )
 
 
-def selected_indices_controls() -> tuple[list[str], dict[str, float], float]:
-    _INDEX_GUIDANCE = {
+def selected_indices_controls(config: AppConfig) -> tuple[list[str], dict[str, float], float]:
+    _INDEX_GUIDANCE: dict[str, str] = {
         "deprivation_inverse": (
             "Measures socioeconomic disadvantage using the Index of Multiple Deprivation (IMD). "
             "Higher values represent greater deprivation — targets communities with the most barriers to accessing services."
@@ -978,10 +978,18 @@ def selected_indices_controls() -> tuple[list[str], dict[str, float], float]:
     _DEFAULT_ENABLED = {"deprivation_inverse", "population", "population_65_plus"}
     _DEFAULT_WEIGHTS = {"deprivation_inverse": 40, "population": 35, "population_65_plus": 25}
 
+    _QOF_UNAVAILABLE_TOOLTIP = (
+        "Enable by supplying a QOF LSOA prevalence CSV in Optional Data Sources. "
+        "Generate it with scripts/analysis/build_qof_lsoa.py."
+    )
+
     selected_indices: list[str] = []
     weights: dict[str, float] = {}
 
     for i, (index_name, defn) in enumerate(INDEX_DEFINITIONS.items()):
+        available_when = defn.get("available_when")
+        qof_unavailable = available_when == "qof" and config.qof_lsoa_csv is None
+
         if i > 0:
             st.markdown(
                 '<div style="border-top:1px solid #EAE3F0;margin:2px 0 6px"></div>',
@@ -989,19 +997,37 @@ def selected_indices_controls() -> tuple[list[str], dict[str, float], float]:
             )
         label_col, weight_col = st.columns([6, 4])
         with label_col:
-            enabled_key = prepare_persisted_widget(
-                f"idx_enabled_{index_name}",
-                index_name in _DEFAULT_ENABLED,
-                normalize=lambda value: bool(value),
-            )
-            enabled = st.checkbox(
-                defn["label"],
-                key=enabled_key,
-            )
-            remember_persisted_widget(f"idx_enabled_{index_name}")
-            st.caption(_INDEX_GUIDANCE[index_name])
+            if qof_unavailable:
+                st.checkbox(
+                    defn["label"],
+                    value=False,
+                    disabled=True,
+                    help=_QOF_UNAVAILABLE_TOOLTIP,
+                    key=f"idx_disabled_{index_name}",
+                )
+                st.caption(
+                    _INDEX_GUIDANCE.get(index_name, defn.get("description", ""))
+                    + "  \n_Requires QOF LSOA CSV — configure in Optional Data Sources._"
+                )
+            else:
+                enabled_key = prepare_persisted_widget(
+                    f"idx_enabled_{index_name}",
+                    index_name in _DEFAULT_ENABLED,
+                    normalize=lambda value: bool(value),
+                )
+                enabled = st.checkbox(
+                    defn["label"],
+                    key=enabled_key,
+                )
+                remember_persisted_widget(f"idx_enabled_{index_name}")
+                st.caption(_INDEX_GUIDANCE.get(index_name, defn.get("description", "")))
         with weight_col:
-            if enabled:
+            if qof_unavailable:
+                st.markdown(
+                    '<div style="color:#9E9099;font-size:0.75rem;margin-top:0.4rem">Not available — data not configured</div>',
+                    unsafe_allow_html=True,
+                )
+            elif enabled:
                 weight_key = prepare_persisted_widget(
                     f"weight_{index_name}",
                     _DEFAULT_WEIGHTS.get(index_name, 0),
@@ -1747,7 +1773,7 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
         "Select which indicators to include and set their weighting. "
         "Weights must sum to exactly 100. Each indicator is min-max scaled within the selected geography before weighting."
     )
-    selected_indices, weights, total_weight = selected_indices_controls()
+    selected_indices, weights, total_weight = selected_indices_controls(config)
 
     # — Hub scoring ————————————————————————————————————————————————
     st.subheader("Hub Scoring")
