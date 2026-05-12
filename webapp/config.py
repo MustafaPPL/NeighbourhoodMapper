@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from build_weighted_priority_map import (
+from scripts.analysis.build_weighted_priority_map import (
     DEFAULT_65PLUS_CSV,
     DEFAULT_DEPRIVATION_CSV,
     DEFAULT_POPULATION_CSV,

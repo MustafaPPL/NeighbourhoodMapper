@@ -34,11 +34,6 @@ INDEX_DEFINITIONS = {
         "source_column": "population_65_plus",
         "description": "Residents aged 65 years and over.",
     },
-    "older_people_proportion": {
-        "label": "65+ proportion",
-        "source_column": "older_people_proportion",
-        "description": "Residents aged 65+ as a share of total population.",
-    },
 }
 
 DEFAULT_HUB_SCORE_WEIGHTS = {

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-from build_weighted_priority_map import (
+from scripts.analysis.build_weighted_priority_map import (
     DEFAULT_65PLUS_CSV,
     DEFAULT_POPULATION_CSV,
     MAP_DPI,

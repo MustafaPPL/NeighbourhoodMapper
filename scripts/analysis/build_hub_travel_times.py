@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from build_weighted_priority_map import (
+from scripts.analysis.build_weighted_priority_map import (
     DEFAULT_OUTPUT_CSV as DEFAULT_WEIGHTED_SCORED_CSV,
     FAMILY_HUB_GEO_CACHE_CSV,
     GP_GEO_CACHE_CSV,

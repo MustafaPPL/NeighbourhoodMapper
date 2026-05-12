@@ -14,6 +14,7 @@ The outputs are intended to support neighbourhood health strategy, place-based p
 
 ```text
 london_int/
+├─ app.py
 ├─ data/
 │  ├─ older_people/
 │  ├─ primary_care/
@@ -22,21 +23,34 @@ london_int/
 │  ├─ london_civic_centres.csv
 │  ├─ london_libraries.csv
 │  └─ london_nhs_trusts.xlsx
+├─ docs/
+│  ├─ METHODOLOGY.md
+│  ├─ METHODOLOGY_SUMMARY.md
+│  └─ STRATA_GAP_ANALYSIS.md
+├─ scripts/
+│  ├─ analysis/
+│  │  ├─ build_weighted_priority_map.py
+│  │  ├─ build_hub_travel_times.py
+│  │  ├─ build_asset_density_map.py
+│  │  ├─ build_icb_asset_workbooks.py
+│  │  ├─ build_icb_estates_workbooks.py
+│  │  └─ build_weighted_map_legend.py
+│  └─ deployment/
+│     ├─ deploy_to_azure_appservice.ps1
+│     └─ startup.sh
+├─ webapp/
+├─ archive/
 ├─ output/
 │  ├─ maps/
 │  └─ ...
-├─ archive/
-├─ build_weighted_priority_map.py
-├─ build_hub_travel_times.py
-├─ build_asset_density_map.py
-├─ build_icb_asset_workbooks.py
-├─ build_weighted_map_legend.py
-└─ project_paths.py
+├─ Dockerfile
+├─ project_paths.py
+└─ requirements.txt
 ```
 
 ## Active Scripts
 
-### `build_weighted_priority_map.py`
+### `scripts/analysis/build_weighted_priority_map.py`
 Builds the main `LSOA` weighted priority dataset and map for London.
 
 Inputs:
@@ -54,7 +68,7 @@ Outputs:
 - `output/age_65_plus_density_map.png`
 - `output/population_priority_map.png`
 
-### `build_hub_travel_times.py`
+### `scripts/analysis/build_hub_travel_times.py`
 Calculates travel times from London `LSOA` centroids to the nearest hubs.
 
 Supports:
@@ -65,7 +79,7 @@ Outputs:
 - `output/lsoa_hub_travel_times.csv`
 - cached API responses under `output/travel_time_cache/`
 
-### `build_asset_density_map.py`
+### `scripts/analysis/build_asset_density_map.py`
 Builds a neighbourhood-level asset density / service desert dataset and map.
 
 Measures:
@@ -77,14 +91,29 @@ Outputs:
 - `output/neighbourhood_asset_density.csv`
 - `output/neighbourhood_service_desert_map.png`
 
-### `build_icb_asset_workbooks.py`
+### `scripts/analysis/build_icb_asset_workbooks.py`
 Builds ICB-level Excel workbooks for community pharmacies and family hubs.
 
 Outputs:
 - `output/community_pharmacy_by_icb.xlsx`
 - `output/family_hubs_by_icb.xlsx`
 
-### `build_weighted_map_legend.py`
+### `scripts/analysis/build_icb_estates_workbooks.py`
+Builds one Estates mapping Excel workbook per London ICB.
+
+Each workbook contains tabs for:
+- GP practices
+- community pharmacies
+- family hubs
+- NHS trusts
+- civic centres
+- libraries
+- neighbourhood asset-density summary, where available
+
+Outputs:
+- `output/icb_estates_mapping_workbooks/`
+
+### `scripts/analysis/build_weighted_map_legend.py`
 Builds a standalone legend graphic for the weighted map outputs.
 
 Output:
@@ -140,25 +169,31 @@ numpy
 ### Build weighted priority outputs
 
 ```powershell
-.\.venv\Scripts\python.exe build_weighted_priority_map.py
+.\.venv\Scripts\python.exe -m scripts.analysis.build_weighted_priority_map
 ```
 
 ### Build asset density / service desert outputs
 
 ```powershell
-.\.venv\Scripts\python.exe build_asset_density_map.py
+.\.venv\Scripts\python.exe -m scripts.analysis.build_asset_density_map
 ```
 
 ### Build ICB asset workbooks
 
 ```powershell
-.\.venv\Scripts\python.exe build_icb_asset_workbooks.py
+.\.venv\Scripts\python.exe -m scripts.analysis.build_icb_asset_workbooks
+```
+
+### Build per-ICB Estates mapping workbooks
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.analysis.build_icb_estates_workbooks
 ```
 
 ### Build weighted map legend
 
 ```powershell
-.\.venv\Scripts\python.exe build_weighted_map_legend.py
+.\.venv\Scripts\python.exe -m scripts.analysis.build_weighted_map_legend
 ```
 
 ### Build hub travel times
@@ -166,13 +201,13 @@ numpy
 Driving example:
 
 ```powershell
-.\.venv\Scripts\python.exe build_hub_travel_times.py --hub-type gp --hub-type pharmacy --profile driving
+.\.venv\Scripts\python.exe -m scripts.analysis.build_hub_travel_times --hub-type gp --hub-type pharmacy --profile driving
 ```
 
 Transit example:
 
 ```powershell
-.\.venv\Scripts\python.exe build_hub_travel_times.py --hub-type gp --hub-type pharmacy --profile transit --date 20260421 --time 1000 --time-is Departing --tfl-app-key YOUR_KEY
+.\.venv\Scripts\python.exe -m scripts.analysis.build_hub_travel_times --hub-type gp --hub-type pharmacy --profile transit --date 20260421 --time 1000 --time-is Departing --tfl-app-key YOUR_KEY
 ```
 
 ## Notes
@@ -180,7 +215,7 @@ Transit example:
 - `project_paths.py` is the shared path configuration module for the repo.
 - Older exploratory scripts and loose outputs have been moved to `archive/`.
 - Some workflows fetch live geographies from `ONS ArcGIS` services, so internet access may be required.
-- `build_hub_travel_times.py` uses external routing APIs and is slower for `transit` than for road modes.
+- `scripts/analysis/build_hub_travel_times.py` uses external routing APIs and is slower for `transit` than for road modes.
 
 ## Current Focus
 
@@ -208,7 +243,7 @@ The repository now also includes a separate Streamlit application entry point:
 - `webapp/data_access.py`
 - `webapp/analysis.py`
 
-This does not replace `build_weighted_priority_map.py`. The original static mapping workflow still runs independently.
+This does not replace `scripts/analysis/build_weighted_priority_map.py`. The original static mapping workflow still runs independently.
 
 ### What the web app does
 

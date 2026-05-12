@@ -1,4 +1,6 @@
 .venv/
+.azure-cli/
+.azure-deploy/
 .idea/
 .vscode/
 __pycache__/

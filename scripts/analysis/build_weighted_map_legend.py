@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-from build_weighted_priority_map import build_parks_and_gardens_legend_handle
+from scripts.analysis.build_weighted_priority_map import build_parks_and_gardens_legend_handle
 from project_paths import OUTPUT_DIR
 
 

@@ -1,0 +1,397 @@
+{
+  "project": "NeighbourhoodHubRanker",
+  "branchName": "ralph/hub-ranker-enhancements",
+  "description": "Four optional enhancement layers for the London ICB Neighbourhood Hub Ranker: QOF disease prevalence indices, Census 2021 ethnicity equity indices, routed travel-time catchments (OSRM walking + R5 transit), and NHS estate proximity flags.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create data/cache/ directory structure and update ignore files",
+      "description": "As a developer, I want a consistent directory convention for raw source files vs. derived cache files, so that batch script outputs are clearly separated from manually downloaded inputs.",
+      "acceptanceCriteria": [
+        "data/cache/ directory exists with a .gitkeep file so it is tracked by git",
+        ".gitignore excludes data/cache/*.parquet and data/cache/*.csv (large derived files) but keeps the .gitkeep",
+        ".dockerignore excludes the entire data/ directory so cache files are not baked into Docker images",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Build QOF LSOA ingestion batch script",
+      "description": "As a developer, I want a standalone script that reads QOF 2024-25 practice-level register data, GP geocoded coordinates, and GP list sizes, and produces a derived LSOA-level prevalence CSV, so that QOF data is ready for the app to load.",
+      "acceptanceCriteria": [
+        "Script lives at scripts/analysis/build_qof_lsoa.py and accepts a --year argument (default 2024-25)",
+        "Script reads three inputs: QOF register CSV (practice code + disease prevalence %), GP geocoded CSV (practice code + lat/lon), GP list size CSV (practice code + list size)",
+        "For each LSOA centroid, computes weighted prevalence for CHD, COPD, diabetes, and depression using the top-5 nearest GP practices weighted by list_size / distance_km^2",
+        "Every LSOA receives a non-null value (guaranteed by top-5 nearest with no hard radius cutoff)",
+        "Output written to data/cache/qof_lsoa_{year}.csv with columns: LSOA_code, qof_chd_prevalence, qof_copd_prevalence, qof_diabetes_prevalence, qof_depression_prevalence",
+        "Script prints count of LSOAs processed and confirms output path on completion",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Remind user to supply the GP list size CSV file before running this script. The GP geocoded CSV is already in the repo."
+    },
+    {
+      "id": "US-003",
+      "title": "Add QOF AppConfig fields and data validation",
+      "description": "As a developer, I want the app config and validation layer to handle an optional QOF cache CSV path, so that QOF data can be wired in through the existing settings pattern without breaking the app when absent.",
+      "acceptanceCriteria": [
+        "AppConfig dataclass in webapp/config.py gains an optional field qof_lsoa_csv: Path | None with default None",
+        "build_config() sidebar expander in app.py includes a file path text input for QOF cache CSV (optional, labelled clearly)",
+        "webapp/data_validation.py validates that if qof_lsoa_csv is set, the file exists and contains columns LSOA_code, qof_chd_prevalence, qof_copd_prevalence, qof_diabetes_prevalence, qof_depression_prevalence",
+        "If qof_lsoa_csv is None, validation passes silently with no error",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add QOF data loader and integrate into load_need_inputs()",
+      "description": "As a developer, I want a QOF loader function that merges LSOA-level disease prevalence into the need inputs dataframe, so that QOF columns are available for the scoring pipeline when configured.",
+      "acceptanceCriteria": [
+        "load_qof_data(path: Path) -> pd.DataFrame in webapp/data_access.py reads the QOF cache CSV and returns a dataframe with LSOA_code plus the four prevalence columns",
+        "load_need_inputs() conditionally calls load_qof_data() when config.qof_lsoa_csv is set and left-merges the result by LSOA_code",
+        "When QOF is not configured, load_need_inputs() returns the same dataframe as before with no new columns",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Register QOF indices in INDEX_DEFINITIONS",
+      "description": "As an ICB analyst, I want CHD, COPD, diabetes, and depression prevalence to appear as optional indices in the Need Model, so that I can weight clinical need alongside deprivation and population factors.",
+      "acceptanceCriteria": [
+        "INDEX_DEFINITIONS in webapp/analysis.py gains four new entries: qof_chd_prevalence, qof_copd_prevalence, qof_diabetes_prevalence, qof_depression_prevalence",
+        "Each entry has a clear label (e.g. 'Cardiovascular disease prevalence (QOF 2024-25)') and description noting the QOF register used",
+        "Each entry specifies available_when='qof' so the UI can conditionally show/hide it",
+        "Existing scaling and weighting logic applies to the new indices without modification",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "available_when='qof' is a new convention — it flags which optional data source must be present. The UI story (US-006) reads this to grey out controls."
+    },
+    {
+      "id": "US-006",
+      "title": "Add QOF greyed-out UI controls to Configure page",
+      "description": "As an ICB analyst, I want QOF index checkboxes to appear greyed out with a tooltip when QOF data is not configured, so that I can discover the feature and know what file to add.",
+      "acceptanceCriteria": [
+        "When config.qof_lsoa_csv is None, the four QOF index checkboxes render as disabled (st.checkbox with disabled=True)",
+        "Each disabled checkbox shows a tooltip: 'QOF data not configured — add a QOF cache CSV path in Settings to enable'",
+        "When config.qof_lsoa_csv is set, the checkboxes are enabled and participate in the existing weighting workflow",
+        "No other part of the Configure page is affected",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Build ethnicity LSOA ingestion batch script",
+      "description": "As a developer, I want a standalone script that reads a downloaded ONS TS021 Census 2021 CSV and produces a derived LSOA-level proportions CSV, so that ethnicity data is ready for the app to load.",
+      "acceptanceCriteria": [
+        "Script lives at scripts/analysis/build_ethnicity_lsoa.py",
+        "Script reads the ONS TS021 CSV (downloaded from Nomis, reference C2021TS021) and produces five derived proportion columns per LSOA: pct_asian_residents, pct_black_residents, pct_mixed_residents, pct_other_ethnic_group_residents, pct_white_other_residents",
+        "Each proportion is between 0.0 and 1.0 inclusive",
+        "Output written to data/cache/ethnicity_lsoa_2021.csv with columns: LSOA_code plus the five proportion columns",
+        "Script confirms output path and row count on completion",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Source data is static (Census 2021, last updated March 2023). No live API calls needed."
+    },
+    {
+      "id": "US-008",
+      "title": "Add ethnicity AppConfig field and data validation",
+      "description": "As a developer, I want the app config and validation layer to handle an optional ethnicity cache CSV path, so that ethnicity data can be enabled without breaking the app when absent.",
+      "acceptanceCriteria": [
+        "AppConfig dataclass in webapp/config.py gains an optional field ethnicity_lsoa_csv: Path | None with default None",
+        "build_config() sidebar expander in app.py includes a file path text input for the ethnicity cache CSV (optional, labelled clearly)",
+        "webapp/data_validation.py validates that if ethnicity_lsoa_csv is set, the file exists and contains columns LSOA_code, pct_asian_residents, pct_black_residents, pct_mixed_residents, pct_other_ethnic_group_residents, pct_white_other_residents",
+        "If ethnicity_lsoa_csv is None, validation passes silently with no error",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Add ethnicity data loader and integrate into load_need_inputs()",
+      "description": "As a developer, I want an ethnicity loader function that merges LSOA-level proportion columns into the need inputs dataframe, so that ethnicity data participates in the scoring pipeline when configured.",
+      "acceptanceCriteria": [
+        "load_ethnicity_data(path: Path) -> pd.DataFrame in webapp/data_access.py reads the ethnicity cache CSV and returns a dataframe with LSOA_code plus the five proportion columns",
+        "load_need_inputs() conditionally calls load_ethnicity_data() when config.ethnicity_lsoa_csv is set and left-merges the result by LSOA_code",
+        "When ethnicity is not configured, load_need_inputs() returns the same dataframe as before with no new columns",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Register ethnicity indices in INDEX_DEFINITIONS",
+      "description": "As an ICB analyst, I want the five ethnicity proportion fields to appear as optional indices in the Need Model, so that I can explicitly choose which community lens to apply.",
+      "acceptanceCriteria": [
+        "INDEX_DEFINITIONS in webapp/analysis.py gains five new entries: pct_asian_residents, pct_black_residents, pct_mixed_residents, pct_other_ethnic_group_residents, pct_white_other_residents",
+        "Each entry has a clear label (e.g. 'Pct. Asian residents (Census 2021)') and description",
+        "Each entry specifies available_when='ethnicity' so the UI can conditionally disable it",
+        "Existing scaling and weighting logic applies to the new indices without modification",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add ethnicity greyed-out UI controls and equity-lens note to Configure page",
+      "description": "As an ICB analyst, I want ethnicity index checkboxes to appear greyed out when data is not configured, and I want a visible note explaining that these fields are an equity lens rather than a deprivation measure.",
+      "acceptanceCriteria": [
+        "When config.ethnicity_lsoa_csv is None, the five ethnicity index checkboxes render as disabled with tooltip: 'Ethnicity data not configured — add an ethnicity cache CSV path in Settings to enable'",
+        "When configured, checkboxes are enabled and participate in the weighting workflow",
+        "A static st.info box appears near the ethnicity indices stating: 'These fields are an equity lens (Census 2021 proportions). They are not a deprivation substitute. Select only those relevant to your planning question.'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Build OSRM walking travel-time matrix batch script",
+      "description": "As a developer, I want a batch script that queries the OSRM table endpoint with all London LSOA centroids and saves a full LSOA-to-LSOA walking time matrix as parquet, so that walking travel times are available for instant runtime lookup.",
+      "acceptanceCriteria": [
+        "Script lives at scripts/analysis/build_travel_time_matrix.py and accepts a --mode argument (walking|transit)",
+        "For mode=walking, script queries the OSRM table endpoint (router.project-osrm.org, profile=foot) with all LSOA centroids as both sources and destinations",
+        "Output is a parquet file at data/cache/travel_time_walking.parquet with columns: origin_lsoa, destination_lsoa, travel_time_minutes",
+        "Script handles OSRM batch size limits by chunking requests if needed",
+        "Script prints total LSOA pairs computed and output file size on completion",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "OSRM public endpoint is already used in scripts/analysis/build_hub_travel_times.py — reuse the existing request pattern."
+    },
+    {
+      "id": "US-013",
+      "title": "Create R5 Dockerfile and transit matrix batch script",
+      "description": "As a developer, I want a Dockerised R5 batch job that computes a full LSOA-to-LSOA transit travel time matrix using London GTFS feeds, so that accurate public transport times are available for runtime lookup.",
+      "acceptanceCriteria": [
+        "Dockerfile at scripts/analysis/r5/Dockerfile installs R5 (Conveyal) and its Java dependency",
+        "Build script at scripts/analysis/r5/run_transit_matrix.sh (or .py) mounts London GTFS feeds and OSM data, runs R5 to compute the LSOA centroid matrix with Tuesday 10:00am departure, and writes output to data/cache/travel_time_transit.parquet",
+        "Output parquet has columns: origin_lsoa, destination_lsoa, travel_time_minutes",
+        "scripts/analysis/r5/README.md documents where to download London GTFS (TfL bus, Tube, Elizabeth line, national rail) and how to run the Docker container",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "R5 requires Java. The Dockerfile handles this. GTFS feeds are free from TfL data store."
+    },
+    {
+      "id": "US-014",
+      "title": "Add travel time AppConfig fields and data validation",
+      "description": "As a developer, I want the app config to support a travel mode selector and optional paths to the pre-computed walking and transit parquet files, so that travel time features can be toggled without breaking the base workflow.",
+      "acceptanceCriteria": [
+        "AppConfig gains: travel_mode: str (default 'straight_line', options: 'straight_line', 'walking', 'transit'), walking_matrix_path: Path | None, transit_matrix_path: Path | None",
+        "data_validation.py validates that if travel_mode is 'walking', walking_matrix_path is set and the file exists; if 'transit', transit_matrix_path is set and the file exists",
+        "If travel_mode is 'straight_line', no matrix paths are required and validation passes",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Add travel time matrix loader in data_access.py",
+      "description": "As a developer, I want a loader that reads the pre-computed travel time parquet into an efficient lookup structure, so that scoring can retrieve travel times by LSOA pair without re-reading the file on every candidate.",
+      "acceptanceCriteria": [
+        "load_travel_time_matrix(path: Path) -> dict in webapp/data_access.py reads the parquet and returns a dict keyed by (origin_lsoa, destination_lsoa) mapping to travel_time_minutes",
+        "The loader is called once per analysis run and cached in session state so repeated candidate scoring does not re-read the parquet",
+        "If the parquet path is None or the file is missing, the function returns None and the caller falls back to straight-line mode",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Update _score_single_candidate() to use travel-time decay",
+      "description": "As a developer, I want the candidate scoring function to substitute travel-time decay for distance decay when a routed mode is selected, so that hub scores reflect actual access rather than straight-line proximity.",
+      "acceptanceCriteria": [
+        "_score_single_candidate() in webapp/analysis.py accepts an optional travel_time_matrix argument",
+        "When travel_time_matrix is provided and travel_mode is not 'straight_line', catchment weight for each LSOA is computed as max(0, 1 - travel_time_minutes / 30)",
+        "LSOAs with travel time > 30 minutes receive weight 0 and are excluded from the catchment mean",
+        "When travel_time_matrix is None or travel_mode is 'straight_line', existing distance-decay logic is used unchanged",
+        "Output schema of _score_single_candidate() is unchanged",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Add travel time band assignment to LSOA scoring output",
+      "description": "As a developer, I want each LSOA to be assigned a travel-time band label relative to the selected candidate hub, so that the map can colour-code LSOAs by band.",
+      "acceptanceCriteria": [
+        "When a travel mode is active, the candidate scoring step adds a travel_time_band column to the LSOA dataframe: 'inner' (0-10 min), 'middle' (10-20 min), 'outer' (20-30 min), 'beyond' (>30 min or no route)",
+        "Band assignment uses the same travel_time_matrix lookup as scoring",
+        "Column is present only when travel mode is not straight_line; absent otherwise",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Add travel mode selector to Configure page UI",
+      "description": "As an ICB analyst, I want a radio selector on the Configure page to choose between straight-line, walking, and public transport access modes, so that I can control how catchments are computed.",
+      "acceptanceCriteria": [
+        "A radio group in the Configure page offers three options: 'Straight-line radius (default)', 'Walking travel time (OSRM)', 'Public transport travel time (R5 / TfL GTFS)'",
+        "Walking and transit options render as disabled with tooltip 'Travel time matrix not configured — run the batch script and set the path in Settings' when the corresponding matrix path is not set",
+        "Selected mode is passed through to run_analysis() and stored in config",
+        "Catchment radius slider is hidden when a travel mode other than straight-line is active",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Update output map to shade LSOAs by travel-time band",
+      "description": "As an ICB analyst, I want the output map to shade LSOA polygons by travel-time band when a routed mode is selected, replacing the current catchment circle, so that I can see which communities fall within each time band.",
+      "acceptanceCriteria": [
+        "When travel mode is walking or transit, the Folium map renders LSOA polygons colour-coded by travel_time_band: green (inner 0-10 min), amber (middle 10-20 min), red (outer 20-30 min), grey (beyond or no route)",
+        "The existing straight-line catchment circle overlay is hidden when a travel mode is active",
+        "LSOA polygon tooltip shows the travel_time_band label and approximate travel time in minutes",
+        "When travel mode is straight_line, the map renders identically to the current behaviour",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Build ERIC site geocoding batch script",
+      "description": "As a developer, I want a batch script that reads the ERIC 2024/25 site data CSV, filters to London NHS trusts, geocodes site addresses via postcodes.io, and writes a geocoded CSV, so that estate proximity can be computed at runtime.",
+      "acceptanceCriteria": [
+        "Script lives at scripts/analysis/build_eric_geocoded.py",
+        "Script reads the ERIC 2024/25 site CSV (path supplied as argument), filters rows to London NHS trusts using organisation code or trust name matching",
+        "If the ERIC CSV contains latitude/longitude columns with non-null values, those are used directly; otherwise, site postcode is geocoded via the postcodes.io API",
+        "Geocoded results are cached to avoid re-geocoding on repeated runs",
+        "Output written to data/cache/eric_sites_geocoded.csv with columns: site_name, trust_name, postcode, latitude, longitude, geocode_source",
+        "Script prints count of sites geocoded and any failed geocodes on completion",
+        "Typecheck passes"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "The postcodes.io geocoder is already used in the app for candidate postcodes — reuse the same request pattern."
+    },
+    {
+      "id": "US-021",
+      "title": "Add estate AppConfig fields and data validation",
+      "description": "As a developer, I want the app config and validation layer to handle an optional ERIC geocoded CSV path and a configurable search radius, so that estate proximity can be toggled without breaking the base workflow.",
+      "acceptanceCriteria": [
+        "AppConfig gains: eric_geocoded_csv: Path | None (default None), estate_search_radius_m: int (default 1000)",
+        "build_config() sidebar includes a file path input for the ERIC geocoded CSV and a slider for search radius (500-2000 m)",
+        "data_validation.py validates that if eric_geocoded_csv is set, the file exists and contains columns site_name, latitude, longitude",
+        "If eric_geocoded_csv is None, validation passes silently",
+        "Typecheck passes"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Add estate site loader and proximity calculation to data_access.py",
+      "description": "As a developer, I want a loader and proximity function for NHS estate sites, so that candidate scoring can flag nearby estate without modifying the hub score.",
+      "acceptanceCriteria": [
+        "load_estate_sites(path: Path) -> gpd.GeoDataFrame in webapp/data_access.py reads the geocoded ERIC CSV and returns a GeoDataFrame of point geometries with site_name",
+        "compute_estate_proximity(candidate_lat, candidate_lon, estate_sites, radius_m) returns a dict with: nearby_nhs_estate_flag (bool), nearby_estate_count (int), nearest_estate_name (str or None), nearest_estate_distance_m (float or None)",
+        "Function returns all-None/False values without error when estate_sites is None",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Add estate proximity results to output table, map tooltip, and CSV export",
+      "description": "As an ICB analyst, I want estate proximity flags to appear in the ranked candidate table, the map popup, and the CSV download, so that feasibility context is visible at every point of the workflow.",
+      "acceptanceCriteria": [
+        "When eric_geocoded_csv is configured, the candidate scores dataframe gains four columns: nearby_nhs_estate_flag, nearby_estate_count, nearest_estate_name, nearest_estate_distance_m",
+        "The candidate output table in the Outputs page shows these four columns formatted clearly",
+        "The Folium map popup/tooltip for each candidate includes nearby_nhs_estate_flag and nearest_estate_name + distance",
+        "The CSV export includes the four estate columns",
+        "When eric_geocoded_csv is not configured, all four columns are absent and no error occurs",
+        "A greyed-out note appears on the Outputs page when estate data is not configured: 'Estate proximity not available — configure ERIC data in Settings'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": "Estate flags are informational only — they do not affect the numeric hub score."
+    },
+    {
+      "id": "US-024",
+      "title": "Add _metadata.json export alongside candidate CSV",
+      "description": "As an ICB analyst, I want a metadata JSON file downloaded with my results, so that anyone receiving the output can see exactly which data sources, years, attribution methods, and routing modes were active in that run.",
+      "acceptanceCriteria": [
+        "When the user downloads candidate results, a companion _metadata.json is also available for download via a second st.download_button",
+        "The JSON contains: run_timestamp, travel_mode, qof_active (bool), qof_year, qof_attribution_method, ethnicity_active (bool), ethnicity_source, estate_active (bool), estate_dataset, estate_search_radius_m, catchment_radius_m (if straight-line), index_weights (dict of active index names to weights)",
+        "A collapsible 'Run metadata' expander on the Outputs page shows the same information in human-readable form",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Add methodology sections to docs/METHODOLOGY.md for all four features",
+      "description": "As an ICB analyst, I want the Methodology page to include explanations of each enhancement layer, so that I can cite the data sources, attribution methods, and caveats to commissioners.",
+      "acceptanceCriteria": [
+        "docs/METHODOLOGY.md gains four new sections: QOF Disease Prevalence, Ethnicity Indices, Travel-Time Catchments, Estate Availability Flags",
+        "QOF section states: register used per disease (CHD, COPD, diabetes, depression), weighted attribution formula (top-5 nearest, list_size / d^2), QOF year, and the caveat that QOF is recorded prevalence not epidemiological prevalence",
+        "Ethnicity section states: Census 2021 ONS TS021 source, the five derived fields and their exact ONS group mapping, and that these are an equity lens not a deprivation substitute",
+        "Travel-time section states: OSRM as walking provider, R5 with London GTFS as transit provider, Tuesday 10:00am departure assumption, continuous decay formula (1 - t/30), and band thresholds (0-10, 10-20, 20-30 min) for map colouring",
+        "Estate section states: ERIC 2024/25 as source, proximity-only scope in MVP, geocoding method (postcodes.io), default search radius (1 km), and that flags are informational and do not affect hub scores",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

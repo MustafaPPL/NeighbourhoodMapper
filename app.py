@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import os
 from pathlib import Path
-from urllib.parse import quote
 
 import folium
 import geopandas as gpd
@@ -10,12 +13,13 @@ import streamlit as st
 from branca.colormap import linear
 from streamlit_folium import st_folium
 
-from build_weighted_priority_map import (
+from scripts.analysis.build_weighted_priority_map import (
     PARKS_GARDENS_FS_BASE,
     arcgis_query_to_gdf,
     load_community_pharmacies,
     load_family_hubs,
     load_gp_practices,
+    load_nhs_trusts,
 )
 from webapp.analysis import (
     DEFAULT_CATCHMENT_RADIUS_M,
@@ -33,14 +37,18 @@ from webapp.data_validation import ValidationReport, validate_config
 
 st.set_page_config(page_title="Neighbourhood Hub Ranker", layout="wide")
 
-LOGO_PATH = Path("data/logos/PPL Logo_RGB.png")
+APP_ROOT = Path(__file__).resolve().parent
+LOGO_PATH = APP_ROOT / "data" / "logos" / "PPL Logo_RGB.png"
 BRAND_PURPLE = "#490E6F"
 BRAND_PURPLE_DARK = "#350355"
 BRAND_PURPLE_SOFT = "#FAF6FD"
 BRAND_PURPLE_MID = "#EAE3F0"
 BRAND_TEXT = "#0D0517"
 PAGES = ["Introduction", "Configure Inputs", "Outputs", "Methodology"]
-METHODOLOGY_PATH = Path("METHODOLOGY.md")
+METHODOLOGY_PATH = APP_ROOT / "docs" / "METHODOLOGY.md"
+AUTH_USERNAME_ENV = "APP_LOGIN_USERNAME"
+AUTH_PASSWORD_ENV = "APP_LOGIN_PASSWORD"
+AUTH_PASSWORD_SHA256_ENV = "APP_LOGIN_PASSWORD_SHA256"
 ICB_CODE_BY_NAME = {
     "NHS North Central London ICB": "NCL",
     "NHS North East London ICB": "NEL",
@@ -49,15 +57,22 @@ ICB_CODE_BY_NAME = {
     "NHS South West London ICB": "SWL",
 }
 PARKS_AND_GARDENS_OVERLAY = "Parks and gardens"
+
+
+def _load_acute_hospitals() -> gpd.GeoDataFrame:
+    trusts = load_nhs_trusts()
+    return trusts[trusts["trust_type"].str.contains("Acute", case=False, na=False)].copy()
+
+
 ASSET_OVERLAY_STYLES = {
-    "GP practices": {"geometry_type": "point", "loader": load_gp_practices, "color": "#D81B60", "radius": 5},
+    "GP practices": {"geometry_type": "point", "loader": load_gp_practices, "color": "#1565C0", "radius": 3},
     "Community pharmacies": {
         "geometry_type": "point",
         "loader": load_community_pharmacies,
-        "color": "#1F77B4",
-        "radius": 5,
+        "color": "#E65100",
+        "radius": 3,
     },
-    "Family hubs": {"geometry_type": "point", "loader": load_family_hubs, "color": "#2CA02C", "radius": 5},
+    "Family hubs": {"geometry_type": "point", "loader": load_family_hubs, "color": "#2E7D32", "radius": 3},
     PARKS_AND_GARDENS_OVERLAY: {
         "geometry_type": "polygon",
         "color": "#267300",
@@ -65,24 +80,175 @@ ASSET_OVERLAY_STYLES = {
         "weight": 1.0,
         "fill_opacity": 0.28,
     },
+    "Acute hospitals": {
+        "geometry_type": "point",
+        "loader": _load_acute_hospitals,
+        "color": "#1A3A5C",
+        "marker_style": "triangle",
+    },
 }
 
 
-def render_app_header() -> None:
-    st.html(
-        """
-        <div style="padding:10px 0 12px;border-bottom:1px solid #EAE3F0;margin-bottom:4px">
-            <div style="color:#0D0517;font-size:0.95rem;font-weight:700;
-                        font-family:Poppins,Inter,sans-serif;line-height:1.2">
-                London Neighbourhood Hub Decision Explorer
-            </div>
-            <div style="color:#6B6078;font-size:0.78rem;margin-top:3px;
-                        font-family:Poppins,Inter,sans-serif">
-                Candidate location ranking for neighbourhood hub planning
-            </div>
+@st.cache_data(show_spinner=False)
+def load_image_data_uri(path_str: str) -> str | None:
+    path = Path(path_str)
+    if not path.exists():
+        return None
+
+    mime_type = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".svg": "image/svg+xml",
+    }.get(path.suffix.lower())
+    if mime_type is None:
+        return None
+
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def render_logo_markup(class_name: str) -> str:
+    logo_uri = load_image_data_uri(str(LOGO_PATH))
+    if logo_uri is None:
+        return '<div class="brand-fallback">PPL</div>'
+    return f'<img src="{logo_uri}" alt="Private Public Ltd" class="{class_name}">'
+
+
+def switch_page(page_name: str) -> None:
+    st.query_params.clear()
+    st.query_params["page"] = page_name
+    st.rerun()
+
+
+def _persistent_state_key(name: str) -> str:
+    return f"persistent__{name}"
+
+
+def _widget_state_key(name: str) -> str:
+    return f"widget__{name}"
+
+
+def prepare_persisted_widget(name: str, default, normalize=None) -> str:
+    widget_key = _widget_state_key(name)
+    persistent_key = _persistent_state_key(name)
+    value = st.session_state.get(widget_key, st.session_state.get(persistent_key, default))
+    if normalize is not None:
+        value = normalize(value)
+    st.session_state[persistent_key] = value
+    st.session_state[widget_key] = value
+    return widget_key
+
+
+def remember_persisted_widget(name: str) -> None:
+    widget_key = _widget_state_key(name)
+    persistent_key = _persistent_state_key(name)
+    if widget_key in st.session_state:
+        st.session_state[persistent_key] = st.session_state[widget_key]
+
+
+def _get_shared_login_settings() -> tuple[str | None, str | None, bool]:
+    username = os.getenv(AUTH_USERNAME_ENV, "").strip()
+    password_hash = os.getenv(AUTH_PASSWORD_SHA256_ENV, "").strip().lower()
+    password = os.getenv(AUTH_PASSWORD_ENV, "")
+
+    if username and password_hash:
+        return username, password_hash, True
+    if username and password:
+        return username, password, False
+    return None, None, False
+
+
+def _hash_password(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _shared_login_is_enabled() -> bool:
+    username, secret, _ = _get_shared_login_settings()
+    return bool(username and secret)
+
+
+def _password_matches(submitted_password: str, configured_secret: str, uses_hash: bool) -> bool:
+    candidate = _hash_password(submitted_password) if uses_hash else submitted_password
+    return hmac.compare_digest(candidate, configured_secret)
+
+
+def require_authentication() -> None:
+    configured_username, configured_secret, uses_hash = _get_shared_login_settings()
+    if not configured_username or not configured_secret:
+        return
+
+    if st.session_state.get("authenticated_username") == configured_username:
+        return
+
+    st.html("""
+    <style>
+    .stApp { background: #350355 !important; }
+    section[data-testid="stSidebar"] { display: none !important; }
+    .block-container {
+        padding: 6vh 1rem 2rem !important;
+        max-width: 420px !important;
+        margin: 0 auto !important;
+    }
+    div[data-testid="stForm"] {
+        background: #FFFFFF !important;
+        border-radius: 0 0 14px 14px !important;
+        border: 1px solid rgba(73,14,111,0.18) !important;
+        border-top: none !important;
+        padding: 20px 24px 16px !important;
+    }
+    div[data-testid="stForm"] label { color: #3B2F48 !important; font-size: 0.8rem !important; }
+    div[data-testid="stForm"] input {
+        background: #FAF6FD !important;
+        border-color: #D9CFE3 !important;
+        color: #0D0517 !important;
+    }
+    </style>
+    """)
+
+    st.html("""
+    <div style="background:linear-gradient(150deg,#5B1A8A 0%,#490E6F 55%,#350355 100%);
+                border-radius:14px 14px 0 0;padding:40px 28px 32px;text-align:center">
+        <div style="color:white;font-size:3rem;font-weight:800;letter-spacing:-0.03em;
+                    font-family:'Poppins',Inter,sans-serif;line-height:1;margin-bottom:20px">
+            PPL
         </div>
-        """
-    )
+        <div style="color:rgba(255,255,255,0.45);font-size:0.58rem;font-weight:700;
+                    letter-spacing:0.16em;text-transform:uppercase;font-family:'Poppins',Inter,sans-serif;
+                    margin-bottom:6px">
+            NHS · ICB Decision Support
+        </div>
+        <div style="color:white;font-size:1.05rem;font-weight:700;line-height:1.3;
+                    font-family:'Poppins',Inter,sans-serif;margin-bottom:12px">
+            Neighbourhood Hub<br>Decision Explorer
+        </div>
+        <div style="color:rgba(255,255,255,0.45);font-size:0.75rem;line-height:1.5;
+                    font-family:'Poppins',Inter,sans-serif">
+            Sign in to access the workspace
+        </div>
+    </div>
+    """)
+
+    with st.form("shared_login_form", clear_on_submit=False):
+        submitted_username = st.text_input("Username", autocomplete="username")
+        submitted_password = st.text_input("Password", type="password", autocomplete="current-password")
+        submitted = st.form_submit_button("Sign in", use_container_width=True)
+
+    if submitted:
+        username_matches = hmac.compare_digest(submitted_username.strip(), configured_username)
+        password_matches = _password_matches(submitted_password, configured_secret, uses_hash)
+        if username_matches and password_matches:
+            st.session_state["authenticated_username"] = configured_username
+            st.session_state.pop("auth_error", None)
+            st.rerun()
+        else:
+            st.session_state["auth_error"] = "Incorrect username or password."
+
+    if st.session_state.get("auth_error"):
+        st.error(st.session_state["auth_error"])
+
+    st.stop()
+
 
 
 def inject_styles() -> None:
@@ -118,104 +284,191 @@ def inject_styles() -> None:
         #MainMenu { display: none !important; }
         .stDeployButton { display: none !important; }
 
-        /* Main block */
+        /* Hide sidebar — navigation lives in top bar */
+        section[data-testid="stSidebar"] { display: none !important; }
+        section[data-testid="stMain"] { margin-left: 0 !important; }
+
+        /* Main content block */
         .block-container {
-            padding: 1.5rem 2rem 2rem !important;
-            max-width: 1400px;
+            padding: 28px 2.5rem 3rem !important;
+            max-width: 1100px;
+            margin: 0 auto !important;
         }
 
-        /* -- Sidebar -- */
-        section[data-testid="stSidebar"] {
-            background-color: var(--ppl-purple);
-            min-width: 240px !important;
-            max-width: 280px !important;
-            overflow-x: hidden;
+        /* -- Top app banner -- */
+        .ppl-topbar-banner {
+            background: linear-gradient(135deg, #5B1A8A 0%, #490E6F 60%, #350355 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 16px rgba(53,3,85,0.40);
+            margin-bottom: 12px;
         }
-        section[data-testid="stSidebar"] h1,
-        section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3 {
-            color: rgba(255,255,255,.55) !important;
-            font-size: 0.62rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.12em !important;
-            text-transform: uppercase !important;
-            margin-bottom: 6px !important;
+        .ppl-topbar-banner-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
         }
-        section[data-testid="stSidebar"] .stRadio > label {
-            color: rgba(255,255,255,.55) !important;
-            font-size: 0.62rem !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.12em !important;
-            text-transform: uppercase !important;
+        .ppl-topnav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
         }
-        section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label p,
-        section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label span {
-            color: white !important;
-            font-size: 0.875rem !important;
+        .ppl-topnav-logo {
+            height: 26px;
+            width: auto;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
         }
-        section[data-testid="stSidebar"] label,
-        section[data-testid="stSidebar"] p,
-        section[data-testid="stSidebar"] .stMarkdown { color: white !important; }
-        section[data-testid="stSidebar"] .stExpander details {
-            border: 1px solid rgba(255,255,255,.18);
-            border-radius: 8px;
-            background: rgba(255,255,255,.06);
+        .ppl-topnav-wordmark {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
         }
-        section[data-testid="stSidebar"] .stExpander summary { color: white !important; }
-        section[data-testid="stSidebar"] input,
-        section[data-testid="stSidebar"] textarea {
-            background: rgba(255,255,255,.1) !important;
-            color: white !important;
-            border-color: rgba(255,255,255,.2) !important;
-            font-size: 0.8rem !important;
+        .ppl-topnav-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #FFFFFF;
+            letter-spacing: -0.01em;
+            line-height: 1.15;
         }
-        .sidebar-credentials {
-            font-size: 0.62rem;
-            color: rgba(255,255,255,.45);
-            text-align: center;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255,255,255,.12);
-            margin-top: 14px;
-            line-height: 1.7;
-            letter-spacing: 0.04em;
+        .ppl-topnav-sub {
+            font-size: 0.57rem;
+            color: rgba(255,255,255,0.55);
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+        .ppl-topnav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ppl-topnav-user {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
         }
 
-        /* -- App header -- */
-        .brand-fallback {
-            color: var(--ppl-purple);
-            font-weight: 800;
-            font-size: 1.8rem;
-            line-height: 1;
+        /* -- Intro page hero -- */
+        .intro-hero {
+            background: linear-gradient(135deg, #5B1A8A 0%, #490E6F 50%, #350355 100%);
+            border-radius: 18px;
+            padding: 52px 48px 48px;
+            margin-bottom: 20px;
         }
-        .brand-kicker {
-            color: var(--ppl-purple);
+        .intro-hero-eyebrow {
             font-size: 0.62rem;
             font-weight: 700;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.14em;
             text-transform: uppercase;
-            margin-bottom: 2px;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 12px;
         }
-        .brand-heading {
-            color: var(--ppl-ink);
+        .intro-hero-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1.08;
+            letter-spacing: -0.02em;
+            margin-bottom: 14px;
+        }
+        .intro-hero-subtitle {
             font-size: 0.95rem;
-            font-weight: 700;
-            line-height: 1.2;
-        }
-        .brand-note {
-            color: var(--ppl-muted);
-            font-size: 0.8rem;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.65;
             max-width: 560px;
-            margin-top: 3px;
+            margin-bottom: 28px;
+        }
+        /* -- Intro how-it-works steps -- */
+        .intro-section-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            color: var(--ppl-purple);
+            margin-bottom: 14px;
+        }
+        .intro-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 32px;
+        }
+        .intro-step {
+            background: white;
+            border: 1px solid var(--ppl-line);
+            border-radius: 14px;
+            padding: 20px 22px;
+            box-shadow: var(--shadow-sm);
+        }
+        .intro-step-num {
+            width: 28px;
+            height: 28px;
+            background: rgba(73,14,111,0.08);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--ppl-purple);
+            margin-bottom: 10px;
+        }
+        .intro-step-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--ppl-ink);
+            margin-bottom: 6px;
+        }
+        .intro-step-body {
+            font-size: 0.78rem;
+            color: var(--ppl-muted);
+            line-height: 1.6;
         }
 
-        /* -- Hero -- */
+        /* -- Intro scoring section -- */
+        .intro-scoring-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 32px;
+            align-items: start;
+        }
+        .intro-scoring-copy {
+            font-size: 0.85rem;
+            color: var(--ppl-ink2);
+            line-height: 1.7;
+        }
+        .intro-formula-block {
+            background: var(--ppl-cream);
+            border-left: 3px solid var(--ppl-purple);
+            border-radius: 0 10px 10px 0;
+            padding: 14px 18px;
+            font-family: ui-monospace, SFMono-Regular, 'Courier New', monospace;
+            font-size: 0.78rem;
+            color: var(--ppl-ink);
+            line-height: 2.0;
+        }
+        .intro-callout {
+            background: #FFF8EC;
+            border: 1px solid #E0A030;
+            border-radius: 10px;
+            padding: 13px 17px;
+            font-size: 0.8rem;
+            color: var(--ppl-ink2);
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        /* -- Hero shells (Configure Inputs, Methodology pages) -- */
         .hero-shell {
             border: 1px solid var(--ppl-line);
             border-radius: 18px;
-            padding: 18px 22px;
-            background: var(--ppl-paper);
+            padding: 22px 24px;
+            background: linear-gradient(135deg, #FFFFFF 0%, #FBF8FE 60%, #F2ECF9 100%);
             box-shadow: var(--shadow-md);
-            margin-bottom: 14px;
+            margin-bottom: 20px;
         }
         .hero-brand {
             color: var(--ppl-purple);
@@ -238,69 +491,29 @@ def inject_styles() -> None:
             max-width: 860px;
             line-height: 1.55;
         }
-
-        /* -- Nav cards -- */
-        .nav-card {
-            border: 1px solid var(--ppl-line);
-            border-radius: 12px;
-            padding: 14px 16px 16px;
-            background: var(--ppl-paper);
+        .hero-chip-row {
             display: flex;
-            flex-direction: column;
-            min-height: 180px;
-            box-shadow: var(--shadow-sm);
-            transition: border-color 150ms cubic-bezier(.2,.7,.2,1),
-                        box-shadow 150ms cubic-bezier(.2,.7,.2,1),
-                        transform 150ms cubic-bezier(.2,.7,.2,1);
-            height: 100%;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
         }
-        /* Equal-height nav card columns */
-        div[data-testid="stHorizontalBlock"]:has(.nav-card) {
-            align-items: stretch;
-        }
-        div[data-testid="stHorizontalBlock"]:has(.nav-card) > div[data-testid="column"] > div {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        .nav-card:hover {
-            transform: translateY(-1px);
-            border-color: var(--ppl-purple);
-            box-shadow: var(--shadow-md);
-        }
-        .nav-card-active { border-color: var(--ppl-purple); box-shadow: var(--shadow-md); }
-        .nav-card h4 {
-            margin: 0 0 5px 0;
-            color: var(--ppl-ink);
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-        .nav-card p {
-            margin: 0;
-            color: var(--ppl-muted);
-            font-size: 0.8rem;
-            line-height: 1.5;
-            flex: 1;
-        }
-        .nav-btn {
-            display: block;
-            margin-top: 14px;
-            padding: 9px 0;
-            background: var(--ppl-deep);
-            color: white !important;
-            text-align: center;
+        .hero-chip {
+            border: 1px solid rgba(73,14,111,.12);
             border-radius: 999px;
-            text-decoration: none !important;
-            font-size: 0.8rem;
-            font-weight: 600;
-            letter-spacing: 0.01em;
-            transition: background 150ms cubic-bezier(.2,.7,.2,1);
+            padding: 8px 12px;
+            background: rgba(255,255,255,.78);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        .nav-btn:hover { background: var(--ppl-purple); }
-        .nav-btn-active {
-            background: var(--ppl-purple);
-            opacity: 0.7;
-            pointer-events: none;
+        .hero-chip-label {
+            color: var(--ppl-muted);
+            font-size: 0.72rem;
+        }
+        .hero-chip-value {
+            color: var(--ppl-ink);
+            font-size: 0.76rem;
+            font-weight: 700;
         }
 
         /* -- Section shells -- */
@@ -333,12 +546,12 @@ def inject_styles() -> None:
             margin-bottom: 5px;
         }
 
-        /* -- Buttons -- */
+        /* -- Buttons (primary) -- */
         .stButton > button,
         div[data-testid="stDownloadButton"] > button {
             background: var(--ppl-purple);
             color: white;
-            border: 1px solid var(--ppl-purple);
+            border: 2px solid var(--ppl-purple);
             border-radius: 999px;
             font-weight: 600;
             font-size: 0.8rem;
@@ -354,6 +567,34 @@ def inject_styles() -> None:
             color: white;
         }
 
+        /* -- Buttons (secondary / outlined) -- */
+        .stButton > button[data-testid="baseButton-secondary"] {
+            background: white !important;
+            color: var(--ppl-purple) !important;
+            border: 2px solid var(--ppl-line-strong) !important;
+        }
+        .stButton > button[data-testid="baseButton-secondary"]:hover {
+            background: var(--ppl-cream) !important;
+            border-color: var(--ppl-purple) !important;
+            color: var(--ppl-purple) !important;
+        }
+
+        /* -- Segmented control (mode selector) -- */
+        div[data-testid="stSegmentedControl"] {
+            width: 100%;
+        }
+        div[data-testid="stSegmentedControl"] > div {
+            width: 100%;
+            gap: 6px !important;
+        }
+        div[data-testid="stSegmentedControl"] button {
+            flex: 1 !important;
+            min-height: 48px !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            border-radius: 10px !important;
+        }
+
         /* -- Metrics -- */
         div[data-testid="stMetric"] {
             background: var(--ppl-paper);
@@ -367,18 +608,112 @@ def inject_styles() -> None:
 
         /* -- Misc Streamlit overrides -- */
         input[type="radio"] { accent-color: var(--ppl-purple); }
+        input[type="checkbox"] { accent-color: var(--ppl-purple) !important; }
+        input[type="range"] { accent-color: var(--ppl-purple) !important; }
         div[role="radiogroup"] label[data-baseweb="radio"] { align-items: center; }
         .stAlert { font-size: 0.8rem; }
         .stDataFrame { font-size: 0.8rem; }
         h1, h2, h3 { font-size: 1.1rem !important; font-weight: 700 !important; }
         p, li, label { font-size: 0.875rem; }
 
+        /* -- Force BaseWeb slider and toggle to PPL purple -- */
+        [data-baseweb="slider"] [role="slider"] {
+            background-color: var(--ppl-purple) !important;
+            border-color: var(--ppl-purple) !important;
+        }
+        [data-baseweb="slider"] [data-testid="stSliderThumb"] {
+            background-color: var(--ppl-purple) !important;
+            border-color: var(--ppl-purple) !important;
+        }
+        [data-testid="stSlider"] div[role="slider"] {
+            background-color: var(--ppl-purple) !important;
+            border-color: var(--ppl-purple) !important;
+        }
+
         @media (max-width: 900px) {
-            .brand-note { max-width: none; }
+            .block-container { padding: 20px 1.2rem 2rem !important; }
+            .intro-steps-grid { grid-template-columns: 1fr; }
+            .intro-scoring-grid { grid-template-columns: 1fr; }
+            .intro-hero { padding: 36px 24px 32px; }
+            .intro-hero-title { font-size: 1.7rem; }
+            .ppl-topbar-banner-inner { align-items: flex-start; gap: 10px; }
+            .ppl-topnav-right { justify-content: flex-end; }
         }
         </style>
         """
     )
+
+
+def render_topnav(current_page: str) -> None:
+    logo_uri = load_image_data_uri(str(LOGO_PATH))
+    logo_html = (
+        f'<img src="{logo_uri}" class="ppl-topnav-logo" alt="Private Public Ltd">'
+        if logo_uri
+        else '<span style="font-weight:800;color:#490E6F;font-size:1.1rem;line-height:1">PPL</span>'
+    )
+    nav_labels = {
+        "Introduction": "Introduction",
+        "Configure Inputs": "Inputs",
+        "Outputs": "Outputs",
+        "Methodology": "Methodology",
+    }
+    banner_right_html = ""
+    if _shared_login_is_enabled() and st.session_state.get("authenticated_username"):
+        username = st.session_state["authenticated_username"]
+        banner_right_html = (
+            f'<div class="ppl-topnav-right">'
+            f'<span class="ppl-topnav-user">{username}</span>'
+            f"</div>"
+        )
+
+    st.html(
+        f"""
+<div class="ppl-topbar-banner">
+    <div class="ppl-topbar-banner-inner">
+        <div class="ppl-topnav-brand">
+            {logo_html}
+            <div class="ppl-topnav-wordmark">
+                <span class="ppl-topnav-name">Neighbourhood Hub Explorer</span>
+                <span class="ppl-topnav-sub">NHS · ICB Decision Support · Private Public Ltd</span>
+            </div>
+        </div>
+        {banner_right_html}
+    </div>
+</div>
+        """
+    )
+
+    label_to_page = {label: page for page, label in nav_labels.items()}
+    nav_widget_key = "topnav_page"
+    nav_synced_page_key = "topnav_page_synced"
+    current_label = nav_labels[current_page]
+
+    if st.session_state.get(nav_synced_page_key) != current_page:
+        st.session_state[nav_widget_key] = current_label
+        st.session_state[nav_synced_page_key] = current_page
+
+    nav_col, action_col = st.columns([5.2, 1.2], gap="small", vertical_alignment="center")
+    with nav_col:
+        selected_label = st.segmented_control(
+            "Navigation",
+            options=list(nav_labels.values()),
+            key=nav_widget_key,
+            label_visibility="collapsed",
+        )
+    with action_col:
+        if _shared_login_is_enabled() and st.session_state.get("authenticated_username"):
+            if st.button("Sign out", key="topnav_signout", use_container_width=True):
+                st.session_state.pop("authenticated_username", None)
+                st.session_state.pop("auth_error", None)
+                st.query_params.clear()
+                st.rerun()
+
+    if selected_label and label_to_page[selected_label] != current_page:
+        target_page = label_to_page[selected_label]
+        st.session_state[nav_synced_page_key] = target_page
+        switch_page(target_page)
+
+
 
 
 def _sidebar_header() -> None:
@@ -523,205 +858,234 @@ def render_audit_metrics(report: ValidationReport, inventory: dict[str, int]) ->
 
 
 def render_intro_page(report: ValidationReport, inventory: dict[str, int], current_page: str) -> None:
-    card_specs = [
-        (
-            "Introduction",
-            "Guide",
-            "Understand what the tool does, what data it depends on, and how outputs should be interpreted.",
-        ),
-        (
-            "Configure Inputs",
-            "Setup",
-            "Define geography, focus neighbourhoods, need indices, and candidate postcodes.",
-        ),
-        (
-            "Outputs",
-            "Outputs",
-            "Review the choropleth, candidate ranking, scoring explanation, and audit summary.",
-        ),
-    ]
     st.markdown(
         """
-        <div class="hero-shell">
-            <div class="hero-brand">NHS / ICB Decision Support</div>
-            <div class="hero-title">Neighbourhood Hub<br>Location Ranker</div>
-            <div class="hero-subtitle">
-                Explore candidate hub locations against nearby population need, preview neighbourhood footprint before
-                running the model, and rank options using a transparent proximity-weighted scoring method.
-            </div>
-        </div>
+<div class="intro-hero">
+    <div class="intro-hero-eyebrow">NHS · ICB Decision Support</div>
+    <div class="intro-hero-title">Neighbourhood Hub<br>Decision Explorer</div>
+    <div class="intro-hero-subtitle">
+        Rank candidate hub locations against population need across London.
+        Compare sites using transparent, proximity-weighted scoring and
+        export a full audit trail for every run.
+    </div>
+</div>
         """,
         unsafe_allow_html=True,
     )
-    # Only show cards for pages the user isn't already on
-    other_cards = [(pn, t, c) for pn, t, c in card_specs if pn != current_page]
-    cols = st.columns(len(other_cards), gap="medium")
-    for idx, (page_name, title, copy) in enumerate(other_cards):
-        href = f"?page={quote(page_name)}"
-        with cols[idx]:
-            st.markdown(
-                f"""
-                <div class="nav-card">
-                    <h4>{title}</h4>
-                    <p>{copy}</p>
-                    <a class="nav-btn" href="{href}">Open {title.lower()}</a>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    cta_col1, cta_col2, _ = st.columns([1.4, 1.7, 3], gap="small")
+    with cta_col1:
+        if st.button("Get started →", key="intro_get_started", type="primary", use_container_width=True):
+            switch_page("Configure Inputs")
+    with cta_col2:
+        if st.button("View methodology", key="intro_view_methodology", use_container_width=True):
+            switch_page("Methodology")
 
-    st.html("<div style='margin-top:16px'></div>")
+    st.markdown('<div class="intro-section-label">How it works</div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+<div class="intro-steps-grid">
+    <div class="intro-step">
+        <div class="intro-step-num">1</div>
+        <div class="intro-step-title">Configure your scope</div>
+        <div class="intro-step-body">
+            Choose an ICB or all of London. Select focus neighbourhoods and
+            set need index weights that reflect your local priorities.
+        </div>
+    </div>
+    <div class="intro-step">
+        <div class="intro-step-num">2</div>
+        <div class="intro-step-title">Score candidate locations</div>
+        <div class="intro-step-body">
+            Each LSOA is scored using deprivation, population, and other need indices.
+            Candidate postcodes are ranked by nearby demand within a configurable catchment radius.
+        </div>
+    </div>
+    <div class="intro-step">
+        <div class="intro-step-num">3</div>
+        <div class="intro-step-title">Review and export results</div>
+        <div class="intro-step-body">
+            Explore the choropleth map and ranked hub table. Download results
+            with a full scoring audit trail for reporting and further analysis.
+        </div>
+    </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    tab_about, tab_data = st.tabs(["About", "Data & Validation"])
+    st.markdown('<div class="intro-section-label">Scoring model</div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+<div class="intro-scoring-grid">
+    <div class="intro-scoring-copy">
+        Need scores are computed per LSOA by min-max scaling each selected index within
+        the chosen geography, then applying user-defined weights summing to 100.
+        Hub scores combine the need at the candidate site's own LSOA with a
+        distance-weighted mean of surrounding LSOA need within the catchment radius.
+        The balance between local and catchment need is controlled by a single slider.
+    </div>
+    <div class="intro-formula-block">
+Hub Score =<br>
+&nbsp;&nbsp;(host_lsoa_weight × host LSOA need score)<br>
++ (catchment_weight × distance-weighted mean<br>
+&nbsp;&nbsp;&nbsp;need within catchment radius)
+    </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    with tab_about:
-        st.html(
-            """
-            <div style="font-family:Poppins,Inter,sans-serif;padding:4px 0">
-
-                <p style="font-size:0.84rem;color:#3B2F48;line-height:1.65;margin:0 0 20px">
-                    This tool ranks proposed Neighbourhood Hub locations by estimating how much
-                    nearby population need each site would serve. It uses LSOA-level need data
-                    as its analytical base and applies a proximity-weighted scoring model around
-                    each candidate postcode.
-                </p>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
-                    <div style="background:#F2EFFF;border-radius:10px;padding:14px">
-                        <div style="font-size:0.62rem;font-weight:700;color:#490E6F;text-transform:uppercase;
-                                    letter-spacing:.1em;margin-bottom:6px">Step 1</div>
-                        <div style="font-size:0.84rem;font-weight:600;color:#0D0517;margin-bottom:4px">Configure scope</div>
-                        <div style="font-size:0.78rem;color:#6B6078;line-height:1.5">
-                            Choose an ICB or all London, select neighbourhoods, and set index weights that sum to 100.
-                        </div>
-                    </div>
-                    <div style="background:#F2EFFF;border-radius:10px;padding:14px">
-                        <div style="font-size:0.62rem;font-weight:700;color:#490E6F;text-transform:uppercase;
-                                    letter-spacing:.1em;margin-bottom:6px">Step 2</div>
-                        <div style="font-size:0.84rem;font-weight:600;color:#0D0517;margin-bottom:4px">Score LSOAs</div>
-                        <div style="font-size:0.78rem;color:#6B6078;line-height:1.5">
-                            Each LSOA receives a Need Score: indices are min-max scaled within scope,
-                            weighted, and summed.
-                        </div>
-                    </div>
-                    <div style="background:#F2EFFF;border-radius:10px;padding:14px">
-                        <div style="font-size:0.62rem;font-weight:700;color:#490E6F;text-transform:uppercase;
-                                    letter-spacing:.1em;margin-bottom:6px">Step 3</div>
-                        <div style="font-size:0.84rem;font-weight:600;color:#0D0517;margin-bottom:4px">Rank candidate hubs</div>
-                        <div style="font-size:0.78rem;color:#6B6078;line-height:1.5">
-                            Each candidate postcode is scored using nearby LSOA demand and ranked highest to lowest.
-                        </div>
-                    </div>
-                </div>
-
-                <div style="font-size:0.72rem;font-weight:700;color:#490E6F;text-transform:uppercase;
-                            letter-spacing:.08em;margin-bottom:8px">Hub Score formula</div>
-                <div style="background:#F2EFFF;border-left:3px solid #490E6F;border-radius:0 6px 6px 0;
-                            padding:11px 16px;font-family:ui-monospace,monospace;font-size:0.8rem;
-                            color:#0D0517;margin-bottom:16px;line-height:1.9">
-                    Hub Score =&nbsp; <strong>selected host LSOA weight</strong> &times; host LSOA need score<br>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;
-                    <strong>selected catchment weight</strong> &times; distance-weighted mean need score within the chosen radius
-                </div>
-
-                <div style="background:#FFF8EC;border:1px solid #D9A24A;border-radius:8px;
-                            padding:10px 14px;font-size:0.78rem;color:#3B2F48;line-height:1.55">
-                    <strong>Important:</strong> Outputs are decision-support only. They do not replace
-                    local service planning, estate checks, or clinical judgement. Scores are
-                    scope-relative — results are not comparable across runs with different geographies.
-                </div>
-            </div>
-            """
-        )
-
-    with tab_data:
-        st.markdown("##### Data validation")
-        render_validation_panel(report)
-        st.markdown("##### Audit")
-        render_audit_metrics(report, inventory)
-        st.markdown("##### Sources")
-        render_source_table(report)
+    st.markdown(
+        """
+<div class="intro-callout">
+    <strong>Important:</strong> Outputs are decision-support only. They do not replace local service planning,
+    estate checks, or clinical judgement. Scores are scope-relative — results are not directly comparable
+    across runs with different geographies or index weights.
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def selected_indices_controls() -> tuple[list[str], dict[str, float], float]:
-    st.subheader("Need Model")
-    selected_indices = st.multiselect(
-        "Select indices to include",
-        options=list(INDEX_DEFINITIONS),
-        default=["deprivation_inverse", "population", "population_65_plus"],
-        format_func=lambda key: INDEX_DEFINITIONS[key]["label"],
-    )
-    weights: dict[str, float] = {}
-    total_weight = 0.0
-    for index_name in selected_indices:
-        weight = st.number_input(
-            f"{INDEX_DEFINITIONS[index_name]['label']} weight",
-            min_value=0.0,
-            max_value=100.0,
-            value=0.0,
-            step=5.0,
-            key=f"weight_{index_name}",
-        )
-        weights[index_name] = weight
-        total_weight += weight
+    _INDEX_GUIDANCE = {
+        "deprivation_inverse": (
+            "Measures socioeconomic disadvantage using the Index of Multiple Deprivation (IMD). "
+            "Higher values represent greater deprivation — targets communities with the most barriers to accessing services."
+        ),
+        "population": (
+            "Total resident population of the area. Prioritises high-density neighbourhoods "
+            "where a hub would serve the most people."
+        ),
+        "population_65_plus": (
+            "Count of residents aged 65 and over. Reflects demand for services typically used by older populations, "
+            "including preventive health, social care, and community support."
+        ),
+    }
+    _DEFAULT_ENABLED = {"deprivation_inverse", "population", "population_65_plus"}
+    _DEFAULT_WEIGHTS = {"deprivation_inverse": 40, "population": 35, "population_65_plus": 25}
 
-    if selected_indices:
-        st.write("Selected indices")
-        st.dataframe(
-            pd.DataFrame(
-                [
-                    {
-                        "Index": INDEX_DEFINITIONS[index_name]["label"],
-                        "Weight": weights[index_name],
-                        "Definition": INDEX_DEFINITIONS[index_name]["description"],
-                    }
-                    for index_name in selected_indices
-                ]
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
-    st.metric("Weight total", f"{total_weight:.0f}")
+    selected_indices: list[str] = []
+    weights: dict[str, float] = {}
+
+    for i, (index_name, defn) in enumerate(INDEX_DEFINITIONS.items()):
+        if i > 0:
+            st.markdown(
+                '<div style="border-top:1px solid #EAE3F0;margin:2px 0 6px"></div>',
+                unsafe_allow_html=True,
+            )
+        label_col, weight_col = st.columns([6, 4])
+        with label_col:
+            enabled_key = prepare_persisted_widget(
+                f"idx_enabled_{index_name}",
+                index_name in _DEFAULT_ENABLED,
+                normalize=lambda value: bool(value),
+            )
+            enabled = st.checkbox(
+                defn["label"],
+                key=enabled_key,
+            )
+            remember_persisted_widget(f"idx_enabled_{index_name}")
+            st.caption(_INDEX_GUIDANCE[index_name])
+        with weight_col:
+            if enabled:
+                weight_key = prepare_persisted_widget(
+                    f"weight_{index_name}",
+                    _DEFAULT_WEIGHTS.get(index_name, 0),
+                    normalize=lambda value: int(value),
+                )
+                weight = float(
+                    st.slider(
+                        "Weight",
+                        min_value=0,
+                        max_value=100,
+                        step=5,
+                        key=weight_key,
+                        format="%d%%",
+                        label_visibility="collapsed",
+                    )
+                )
+                remember_persisted_widget(f"weight_{index_name}")
+                selected_indices.append(index_name)
+                weights[index_name] = weight
+            else:
+                st.markdown(
+                    '<div style="color:#9E9099;font-size:0.75rem;margin-top:0.4rem">Not included in scoring</div>',
+                    unsafe_allow_html=True,
+                )
+
+    total_weight = sum(weights.values())
+
+    st.markdown(
+        '<div style="border-top:1px solid #EAE3F0;margin:8px 0 4px"></div>',
+        unsafe_allow_html=True,
+    )
+    if total_weight == 100:
+        total_color, total_suffix = "#1a7a3f", "Ready to run ✓"
+    elif total_weight > 100:
+        total_color, total_suffix = "#350355", f"Over by {int(total_weight - 100)} — reduce weights to continue"
+    else:
+        total_color, total_suffix = "#490E6F", f"{int(100 - total_weight)} remaining — allocate all 100 points to continue"
+    st.markdown(
+        f'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">'
+        f'<span style="font-size:0.78rem;color:{total_color}">{total_suffix}</span>'
+        f'<span style="font-size:1rem;font-weight:700;color:{total_color}">{int(total_weight)} / 100</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
     return selected_indices, weights, total_weight
 
 
 def hub_score_weight_controls() -> tuple[dict[str, float], float]:
-    st.subheader("Hub Scoring")
-
-    st.markdown("**Scoring Balance**")
     st.caption(
-        "Drag left to prioritise the need in the candidate site's own area; "
-        "drag right to weight the wider surrounding neighbourhood more heavily."
+        "A hub's score is built from two components. "
+        "The site area is the neighbourhood the candidate location sits directly within. "
+        "The surrounding catchment is the distance-weighted average need of all areas within the catchment radius — "
+        "nearby areas count more than distant ones."
     )
     left_col, right_col = st.columns(2)
     left_col.markdown(
-        '<div style="font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Local focus</div>',
+        '<div style="font-size:0.74rem;color:#6B6078;margin-bottom:-12px">← Weight the site\'s own area more</div>',
         unsafe_allow_html=True,
     )
     right_col.markdown(
-        '<div style="text-align:right;font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Neighbourhood reach</div>',
+        '<div style="text-align:right;font-size:0.74rem;color:#6B6078;margin-bottom:-12px">Weight the surrounding catchment more →</div>',
         unsafe_allow_html=True,
+    )
+    balance_key = prepare_persisted_widget(
+        "hub_weight_balance",
+        int(DEFAULT_HUB_SCORE_WEIGHTS["host_lsoa"]),
+        normalize=lambda value: int(value),
     )
     balance = st.slider(
         "Scoring balance",
         min_value=0,
         max_value=100,
-        value=int(DEFAULT_HUB_SCORE_WEIGHTS["host_lsoa"]),
         step=5,
-        key="hub_weight_balance",
+        key=balance_key,
         label_visibility="collapsed",
     )
+    remember_persisted_widget("hub_weight_balance")
     host_lsoa_weight = balance
     catchment_weight = 100 - balance
-    left_col2, right_col2 = st.columns(2)
-    left_col2.markdown(
-        f'<div style="font-size:0.78rem;color:#6B6078">0 &nbsp;&nbsp;'
-        f'<span style="color:#0D0517;font-weight:600">Host LSOA: {host_lsoa_weight}</span></div>',
-        unsafe_allow_html=True,
-    )
-    right_col2.markdown(
-        f'<div style="text-align:right;font-size:0.78rem;color:#6B6078">'
-        f'<span style="color:#0D0517;font-weight:600">Catchment: {catchment_weight}</span> &nbsp;&nbsp; 100</div>',
+    st.markdown(
+        f'<div style="margin-top:8px">'
+        f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+        f'<span style="min-width:140px;font-size:0.74rem;color:#6B6078">Site area</span>'
+        f'<div style="flex:1;height:8px;background:#EAE3F0;border-radius:4px;overflow:hidden">'
+        f'<div style="width:{host_lsoa_weight}%;height:100%;background:#490E6F;border-radius:4px"></div>'
+        f'</div>'
+        f'<span style="min-width:32px;text-align:right;font-size:0.8rem;font-weight:600;color:#0D0517">{host_lsoa_weight}%</span>'
+        f'</div>'
+        f'<div style="display:flex;align-items:center;gap:10px">'
+        f'<span style="min-width:140px;font-size:0.74rem;color:#6B6078">Surrounding catchment</span>'
+        f'<div style="flex:1;height:8px;background:#EAE3F0;border-radius:4px;overflow:hidden">'
+        f'<div style="width:{catchment_weight}%;height:100%;background:#9576FF;border-radius:4px"></div>'
+        f'</div>'
+        f'<span style="min-width:32px;text-align:right;font-size:0.8rem;font-weight:600;color:#0D0517">{catchment_weight}%</span>'
+        f'</div>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
@@ -729,41 +1093,41 @@ def hub_score_weight_controls() -> tuple[dict[str, float], float]:
 
 
 def catchment_radius_control() -> float:
-    st.markdown("**Catchment Radius**")
     st.caption(
-        "The furthest distance from the candidate site that counts toward its score. "
-        "Nearby LSOAs contribute fully; those at this edge contribute near-zero; beyond it they are ignored."
+        "The furthest distance from a candidate site that contributes to its hub score. "
+        "Areas within this radius are included and weighted by proximity — nearer areas count more. "
+        "A smaller radius focuses on immediate local need; a larger radius captures broader neighbourhood demand."
     )
-    left_col, right_col = st.columns(2)
-    left_col.markdown(
-        '<div style="font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Minimum</div>',
-        unsafe_allow_html=True,
-    )
-    right_col.markdown(
-        '<div style="text-align:right;font-size:0.75rem;color:#6B6078;margin-bottom:-12px">Maximum</div>',
-        unsafe_allow_html=True,
+    radius_key = prepare_persisted_widget(
+        "catchment_radius_m",
+        int(DEFAULT_CATCHMENT_RADIUS_M),
+        normalize=lambda value: int(value),
     )
     radius = float(
         st.slider(
             "Catchment radius",
             min_value=250,
             max_value=5000,
-            value=int(DEFAULT_CATCHMENT_RADIUS_M),
             step=250,
-            key="catchment_radius_m",
+            key=radius_key,
+            format="%d m",
             label_visibility="collapsed",
         )
     )
+    remember_persisted_widget("catchment_radius_m")
     walk_mins = round(radius / 83)
-    left_col2, right_col2 = st.columns(2)
-    left_col2.markdown(
-        '<div style="font-size:0.78rem;color:#6B6078">250 m</div>',
-        unsafe_allow_html=True,
-    )
-    right_col2.markdown(
-        f'<div style="text-align:right;font-size:0.78rem;color:#6B6078">5,000 m &nbsp;&nbsp;'
-        f'<span style="color:#0D0517;font-weight:600">≈ {walk_mins} min walk</span></div>',
-        unsafe_allow_html=True,
+    if radius <= 500:
+        scale_hint = "immediate surroundings only"
+    elif radius <= 1000:
+        scale_hint = "immediate neighbourhood scale"
+    elif radius <= 2000:
+        scale_hint = "local neighbourhood scale"
+    elif radius <= 3000:
+        scale_hint = "district-wide scale"
+    else:
+        scale_hint = "borough-wide scale"
+    st.caption(
+        f"**{radius:,.0f} m** · approx. **{walk_mins} min walk** · {scale_hint} · Range: 250 m – 5,000 m"
     )
     return radius
 
@@ -789,6 +1153,9 @@ def load_neighbourhood_geojson(config: AppConfig) -> str:
     return neighbourhoods.to_json()
 
 
+_LONDON_BBOX = [[51.28, -0.52], [51.69, 0.34]]
+
+
 def build_neighbourhood_preview_map(
     config: AppConfig,
     geography_mode: str,
@@ -800,18 +1167,36 @@ def build_neighbourhood_preview_map(
         icb_code = ICB_CODE_BY_NAME.get(icb_name)
         neighbourhoods = neighbourhoods[neighbourhoods["ICB"].astype(str).str.strip().eq(icb_code)].copy()
 
-    if neighbourhoods.empty:
-        return folium.Map(location=[51.5074, -0.1278], zoom_start=10, tiles="CartoDB positron")
-
-    selected_set = set(selected_neighbourhoods)
-    centre_geom = neighbourhoods.to_crs(27700).union_all().centroid
-    centre_geom = pd.Series([centre_geom], dtype="object")
-    centre = gpd.GeoSeries(centre_geom, crs=27700).to_crs(4326).iloc[0]
     fmap = folium.Map(
-        location=[float(centre.y), float(centre.x)],
+        location=[51.505, -0.09],
         zoom_start=10,
         tiles="CartoDB positron",
+        max_bounds=True,
+        min_lat=51.1,
+        max_lat=51.9,
+        min_lon=-0.7,
+        max_lon=0.55,
+        min_zoom=8,
     )
+
+    if neighbourhoods.empty:
+        fmap.fit_bounds(_LONDON_BBOX)
+        return fmap
+
+    selected_set = set(selected_neighbourhoods)
+
+    # Zoom to: selected neighbourhoods > ICB area > all London
+    if selected_neighbourhoods:
+        zoom_target = neighbourhoods[neighbourhoods["nghbrhd"].isin(selected_set)]
+        if zoom_target.empty:
+            zoom_target = neighbourhoods
+        b = zoom_target.total_bounds
+        fmap.fit_bounds([[b[1], b[0]], [b[3], b[2]]])
+    elif geography_mode == "Specific ICB":
+        b = neighbourhoods.total_bounds
+        fmap.fit_bounds([[b[1], b[0]], [b[3], b[2]]])
+    else:
+        fmap.fit_bounds(_LONDON_BBOX)
 
     def style_function(feature: dict[str, object]) -> dict[str, object]:
         properties = feature["properties"]
@@ -874,7 +1259,7 @@ def load_asset_overlay_frame(asset_name: str) -> pd.DataFrame:
     overlay = ASSET_OVERLAY_STYLES[asset_name]["loader"]()
     overlay = overlay.to_crs(4326)
     label_column = None
-    for candidate in ["Practice Name", "SiteName", "Family_Hub", "Postcode", "hub_name"]:
+    for candidate in ["Practice Name", "SiteName", "Family_Hub", "Trust Name", "Postcode", "hub_name"]:
         if candidate in overlay.columns:
             label_column = candidate
             break
@@ -927,16 +1312,35 @@ def add_point_asset_overlay(
         return
     layer = folium.FeatureGroup(name=asset_name, show=True)
     for _, row in asset_points.iterrows():
-        folium.CircleMarker(
-            location=[float(row.geometry.y), float(row.geometry.x)],
-            radius=style["radius"],
-            color=style["color"],
-            weight=1,
-            fill=True,
-            fill_color=style["color"],
-            fill_opacity=0.85,
-            tooltip=f"{asset_name}: {row['label']}",
-        ).add_to(layer)
+        loc = [float(row.geometry.y), float(row.geometry.x)]
+        tip = f"{asset_name}: {row['label']}"
+        if style.get("marker_style") == "triangle":
+            folium.Marker(
+                location=loc,
+                icon=folium.DivIcon(
+                    html=(
+                        f'<div style="width:0;height:0;'
+                        f'border-left:6px solid transparent;'
+                        f'border-right:6px solid transparent;'
+                        f'border-bottom:11px solid {style["color"]};'
+                        f'filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4))"></div>'
+                    ),
+                    icon_size=(12, 11),
+                    icon_anchor=(6, 11),
+                ),
+                tooltip=tip,
+            ).add_to(layer)
+        else:
+            folium.CircleMarker(
+                location=loc,
+                radius=style["radius"],
+                color=style["color"],
+                weight=1,
+                fill=True,
+                fill_color=style["color"],
+                fill_opacity=0.85,
+                tooltip=tip,
+            ).add_to(layer)
     layer.add_to(fmap)
 
 
@@ -1008,27 +1412,187 @@ def add_asset_overlays(
     return fmap
 
 
+def _analysis_loading_html(candidate_mode: str) -> str:
+    subtitle = (
+        "Scoring need indicators across all candidate areas and surfacing the highest-need locations&hellip;"
+        if candidate_mode == "suggested"
+        else "Geocoding your candidates and computing hub scores across the selected area&hellip;"
+    )
+    dots = "".join(
+        f'<div class="ld" style="animation-delay:{round((i * 0.14) % 2.2, 2)}s"></div>'
+        for i in range(30)
+    )
+    return f"""
+<style>
+.lw {{
+  background: linear-gradient(135deg, #2A0245 0%, #490E6F 50%, #5B1A8A 100%);
+  border-radius: 18px;
+  padding: 40px 36px 36px;
+  text-align: center;
+  font-family: 'Poppins', Inter, sans-serif;
+  overflow: hidden;
+  position: relative;
+}}
+/* subtle shimmer sweep */
+.lw::after {{
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -60%;
+  width: 40%;
+  height: 180%;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.04) 50%, transparent 60%);
+  animation: sweep 3.5s ease-in-out infinite;
+}}
+@keyframes sweep {{
+  0% {{ left: -60%; }}
+  100% {{ left: 140%; }}
+}}
+/* dot grid */
+.lg {{
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+  width: fit-content;
+  margin: 0 auto 32px;
+}}
+.ld {{
+  width: 9px;
+  height: 9px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 50%;
+  animation: dp 2.4s ease-in-out infinite;
+}}
+@keyframes dp {{
+  0%,100% {{ background: rgba(255,255,255,0.1); transform: scale(0.65); }}
+  50% {{ background: #9576FF; transform: scale(1.2); box-shadow: 0 0 7px rgba(149,118,255,0.75); }}
+}}
+/* pulsing rings */
+.rc {{
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 24px;
+}}
+.rr {{
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  border: 1.5px solid rgba(149,118,255,0.65);
+  border-radius: 50%;
+  animation: re 2.4s ease-out infinite;
+}}
+.rr:nth-child(1) {{ animation-delay: 0s; }}
+.rr:nth-child(2) {{ animation-delay: 0.8s; }}
+.rr:nth-child(3) {{ animation-delay: 1.6s; }}
+@keyframes re {{
+  0%  {{ width: 12px; height: 12px; opacity: 1; }}
+  100% {{ width: 66px; height: 66px; opacity: 0; }}
+}}
+.rb {{
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 12px; height: 12px;
+  background: #9576FF;
+  border-radius: 50%;
+  animation: bp 1.8s ease-in-out infinite;
+}}
+@keyframes bp {{
+  0%,100% {{ box-shadow: 0 0 8px rgba(149,118,255,0.6); }}
+  50%      {{ box-shadow: 0 0 20px rgba(149,118,255,1.0), 0 0 40px rgba(149,118,255,0.3); }}
+}}
+.lt {{
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}}
+.ls {{
+  color: rgba(255,255,255,0.5);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  max-width: 360px;
+  margin: 0 auto 20px;
+}}
+/* progress bar */
+.pb {{
+  width: 200px;
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 99px;
+  margin: 0 auto;
+  overflow: hidden;
+}}
+.pf {{
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #9576FF, #C4B0FF);
+  border-radius: 99px;
+  animation: slide 1.8s ease-in-out infinite;
+}}
+@keyframes slide {{
+  0%   {{ margin-left: -40%; }}
+  100% {{ margin-left: 100%; }}
+}}
+</style>
+<div class="lw">
+  <div class="lg">{dots}</div>
+  <div class="rc">
+    <div class="rr"></div><div class="rr"></div><div class="rr"></div>
+    <div class="rb"></div>
+  </div>
+  <div class="lt">Building the neighbourhood picture</div>
+  <div class="ls">{subtitle}</div>
+  <div class="pb"><div class="pf"></div></div>
+</div>
+"""
+
+
 def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     st.markdown(
         """
         <div class="hero-shell">
-            <div class="hero-brand">Setup</div>
-            <div class="hero-title">Footprint Builder</div>
+            <div class="hero-brand">Analysis Setup</div>
+            <div class="hero-title">Inputs</div>
             <div class="hero-subtitle">
-                Define the analysis area, preview the neighbourhood footprint that will be included, then configure
-                need weights and candidate hub locations.
+                Define the analysis area, select candidate hub locations, and configure the need model before running the analysis.
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.html('<div class="mini-label" style="font-family:Poppins,Inter,sans-serif;color:#490E6F;font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Spatial perspective</div>')
-    geography_mode = st.radio("Geography", options=["All London", "Specific ICB"], horizontal=True, label_visibility="collapsed")
-    icb_name = None
-    if geography_mode == "Specific ICB":
-        icb_name = st.selectbox("ICB", options=ICB_CHOICES)
+    # — Analysis area ——————————————————————————————————————————————
+    st.subheader("Analysis Area")
+    st.caption(
+        "Choose whether to analyse all of London or a specific Integrated Care Board (ICB). "
+        "Narrowing to an ICB focuses scoring entirely within that area."
+    )
+    scope_options = ["All London"] + list(ICB_CHOICES)
+    scope_key = prepare_persisted_widget(
+        "selected_scope",
+        "All London",
+        normalize=lambda value: value if value in scope_options else "All London",
+    )
+    selected_scope = st.selectbox(
+        "Scope",
+        options=scope_options,
+        key=scope_key,
+        label_visibility="collapsed",
+        help="All London includes all 32 London boroughs. Each ICB option covers the associated NHS Integrated Care Board area.",
+    )
+    remember_persisted_widget("selected_scope")
+    geography_mode = "Specific ICB" if selected_scope != "All London" else "All London"
+    icb_name = selected_scope if geography_mode == "Specific ICB" else None
 
+    # — Neighbourhood focus ————————————————————————————————————————
+    st.subheader("Neighbourhood Focus")
+    st.caption(
+        "Optionally narrow the analysis to specific named neighbourhoods within the selected area. "
+        "Leave blank to include all neighbourhoods."
+    )
     neighbourhood_frame = load_neighbourhood_frame(config)
     if geography_mode == "Specific ICB" and icb_name:
         icb_code = ICB_CODE_BY_NAME.get(icb_name)
@@ -1037,33 +1601,60 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     filter_col, select_col = st.columns(2, gap="large")
     with filter_col:
         borough_options = sorted(neighbourhood_frame["borough"].dropna().unique().tolist())
-        selected_boroughs = st.multiselect("Filter neighbourhood list by borough", options=borough_options)
+        borough_key = prepare_persisted_widget(
+            "selected_boroughs",
+            [],
+            normalize=lambda values: [value for value in list(values or []) if value in borough_options],
+        )
+        selected_boroughs = st.multiselect("Filter by borough", options=borough_options, key=borough_key)
+        remember_persisted_widget("selected_boroughs")
     if selected_boroughs:
         filtered_neighbourhoods = neighbourhood_frame[neighbourhood_frame["borough"].isin(selected_boroughs)].copy()
     else:
         filtered_neighbourhoods = neighbourhood_frame.copy()
     with select_col:
         neighbourhood_options = sorted(filtered_neighbourhoods["nghbrhd"].dropna().unique().tolist())
+        neighbourhood_key = prepare_persisted_widget(
+            "selected_neighbourhoods",
+            [],
+            normalize=lambda values: [value for value in list(values or []) if value in neighbourhood_options],
+        )
         selected_neighbourhoods = st.multiselect(
-            "Select neighbourhoods to focus on",
+            "Select neighbourhoods",
             options=neighbourhood_options,
+            key=neighbourhood_key,
             placeholder="Leave blank to include the full selected geography",
         )
+        remember_persisted_widget("selected_neighbourhoods")
     st.caption(
-        f"Selected neighbourhoods: {len(selected_neighbourhoods)} of {len(neighbourhood_options) if neighbourhood_options else 0}"
+        f"Coverage: {len(selected_neighbourhoods)} neighbourhood(s) selected of {len(neighbourhood_options)} available"
+        if selected_neighbourhoods
+        else f"Coverage: all {len(neighbourhood_options)} neighbourhood(s) in the selected area"
     )
 
-    st.markdown("#### Neighbourhood coverage preview")
-    st.caption("Confirm the footprint before configuring scoring inputs.")
+    st.subheader("Footprint preview")
+    st.caption("Confirm the geographic footprint before configuring scoring.")
     preview_map = build_neighbourhood_preview_map(config, geography_mode, icb_name, selected_neighbourhoods)
-    st_folium(preview_map, use_container_width=True, height=520, returned_objects=[])
+    st_folium(preview_map, use_container_width=True, height=440, returned_objects=[])
 
-    st.markdown("#### Candidate hub locations")
-    candidate_workflow = st.radio(
-        "Candidate workflow",
-        options=["Rank provided postcodes", "Suggest locations"],
-        horizontal=True,
+    # — Candidate hub locations ————————————————————————————————————
+    st.subheader("Candidate Hub Locations")
+    st.caption(
+        "Provide specific postcodes to rank, or let the tool suggest the highest-need locations automatically. "
+        "Suggested locations are starting points only — validate against local estate, engagement, and clinical context before acting on them."
     )
+    workflow_key = prepare_persisted_widget(
+        "candidate_workflow",
+        "Suggest locations",
+        normalize=lambda value: value if value in ["Suggest locations", "Rank provided postcodes"] else "Suggest locations",
+    )
+    candidate_workflow = st.segmented_control(
+        "Candidate workflow",
+        options=["Suggest locations", "Rank provided postcodes"],
+        key=workflow_key,
+        label_visibility="collapsed",
+    )
+    remember_persisted_widget("candidate_workflow")
     candidate_mode = "suggested" if candidate_workflow == "Suggest locations" else "manual"
     candidate_postcodes: list[str] = []
     suggestion_count = DEFAULT_SUGGESTION_COUNT
@@ -1071,54 +1662,104 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     suggestion_one_per_neighbourhood = True
 
     if candidate_mode == "manual":
+        candidate_postcodes_key = prepare_persisted_widget(
+            "candidate_postcodes_raw",
+            "",
+            normalize=lambda value: str(value or ""),
+        )
         candidate_postcodes_raw = st.text_area(
             "Enter one postcode per line",
-            height=160,
+            height=140,
+            key=candidate_postcodes_key,
             placeholder="E1 4DG\nSE1 2QH\nN15 4RX",
+            help="Enter London postcodes, one per line or comma-separated. Each is geocoded and scored against the need model.",
         )
+        remember_persisted_widget("candidate_postcodes_raw")
         candidate_postcodes = parse_postcodes(candidate_postcodes_raw)
     else:
-        st.caption(
-            "The app will score LSOA-centroid search locations and label each one with a representative postcode "
-            "from the host LSOA. Treat suggestions as starting points for local estate and engagement checks."
-        )
-        suggestion_col, spacing_col, diversity_col = st.columns(3, gap="medium")
-        with suggestion_col:
+        _suggestion_options = [3, 5, 10, 15, 20]
+        sug_col, spacing_col, toggle_col = st.columns([1, 2.5, 1.5], gap="large")
+        with sug_col:
+            suggestion_count_key = prepare_persisted_widget(
+                "suggestion_count",
+                DEFAULT_SUGGESTION_COUNT,
+                normalize=lambda value: int(value) if int(value) in _suggestion_options else DEFAULT_SUGGESTION_COUNT,
+            )
             suggestion_count = int(
-                st.number_input(
-                    "Number of suggestions",
-                    min_value=1,
-                    max_value=25,
-                    value=DEFAULT_SUGGESTION_COUNT,
-                    step=1,
+                st.selectbox(
+                    "Locations",
+                    options=_suggestion_options,
+                    key=suggestion_count_key,
+                    help="The tool scores all LSOA-centroid candidates in the selected area and returns the top N by hub score.",
                 )
             )
+            remember_persisted_widget("suggestion_count")
         with spacing_col:
+            suggestion_spacing_key = prepare_persisted_widget(
+                "suggestion_min_spacing_m",
+                DEFAULT_SUGGESTION_MIN_SPACING_M,
+                normalize=lambda value: int(value),
+            )
             suggestion_min_spacing_m = float(
                 st.slider(
-                    "Minimum spacing",
+                    "Min. spacing between suggestions",
                     min_value=0,
                     max_value=5000,
-                    value=DEFAULT_SUGGESTION_MIN_SPACING_M,
                     step=250,
+                    key=suggestion_spacing_key,
                     format="%d m",
+                    help="Prevents clustering — any two suggestions will be at least this far apart. Set to 0 to allow any spacing.",
                 )
             )
-        with diversity_col:
-            suggestion_one_per_neighbourhood = st.toggle("One per neighbourhood", value=True)
+            remember_persisted_widget("suggestion_min_spacing_m")
+        with toggle_col:
+            suggestion_toggle_key = prepare_persisted_widget(
+                "suggestion_one_per_neighbourhood",
+                True,
+                normalize=lambda value: bool(value),
+            )
+            suggestion_one_per_neighbourhood = st.toggle(
+                "One per neighbourhood",
+                key=suggestion_toggle_key,
+                help=(
+                    "When enabled, no two suggestions will fall within the same named neighbourhood. "
+                    "This spreads coverage more evenly across the area rather than clustering results in one high-need zone."
+                ),
+            )
+            remember_persisted_widget("suggestion_one_per_neighbourhood")
 
+    # — Need model —————————————————————————————————————————————————
+    st.subheader("Need Model")
+    st.caption(
+        "Select which indicators to include and set their weighting. "
+        "Weights must sum to exactly 100. Each indicator is min-max scaled within the selected geography before weighting."
+    )
     selected_indices, weights, total_weight = selected_indices_controls()
+
+    # — Hub scoring ————————————————————————————————————————————————
+    st.subheader("Hub Scoring")
     hub_score_weights, _ = hub_score_weight_controls()
+
+    # — Catchment radius ———————————————————————————————————————————
+    st.subheader("Catchment Radius")
     catchment_radius_m = catchment_radius_control()
 
+    # — Catchment preview (manual mode only) ———————————————————————
     if candidate_mode == "manual" and candidate_postcodes:
-        st.markdown("#### Catchment radius preview")
-        st.caption("Select a candidate location to see how the catchment radius looks on the map. Move the slider above to watch the circle grow or shrink.")
-        preview_postcode = st.selectbox(
-            "Host LSOA / candidate location",
-            options=candidate_postcodes,
-            key="catchment_preview_postcode",
+        st.markdown("#### Catchment preview")
+        st.caption("Select a candidate postcode to visualise how the catchment radius looks on the map.")
+        preview_key = prepare_persisted_widget(
+            "catchment_preview_postcode",
+            candidate_postcodes[0],
+            normalize=lambda value: value if value in candidate_postcodes else candidate_postcodes[0],
         )
+        preview_postcode = st.selectbox(
+            "Preview postcode",
+            options=candidate_postcodes,
+            key=preview_key,
+            label_visibility="collapsed",
+        )
+        remember_persisted_widget("catchment_preview_postcode")
         if preview_postcode:
             coords = geocode_single_postcode(preview_postcode, config)
             if coords:
@@ -1128,53 +1769,7 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
             else:
                 st.caption(f"Could not geocode {preview_postcode} — check that the postcode is valid.")
 
-    st.markdown("#### Analysis audit")
-    audit_frame = pd.DataFrame(
-        [
-            {"Setting": "Selected geography", "Value": icb_name if icb_name else geography_mode},
-            {"Setting": "Indexed LSOAs in source files", "Value": report.index_lsoa_count or 0},
-            {
-                "Setting": "Focus neighbourhoods",
-                "Value": ", ".join(selected_neighbourhoods[:8]) + (" ..." if len(selected_neighbourhoods) > 8 else "")
-                if selected_neighbourhoods
-                else "Full selected geography",
-            },
-            {"Setting": "Candidate workflow", "Value": candidate_workflow},
-            {
-                "Setting": "Candidate hubs",
-                "Value": len(candidate_postcodes)
-                if candidate_mode == "manual"
-                else f"Suggest up to {suggestion_count}",
-            },
-            {
-                "Setting": "Indices and weights",
-                "Value": ", ".join(
-                    f"{INDEX_DEFINITIONS[index_name]['label']} ({weights[index_name]:.0f})"
-                    for index_name in selected_indices
-                )
-                or "None selected",
-            },
-            {
-                "Setting": "Hub scoring weights",
-                "Value": (
-                    f"Host LSOA ({hub_score_weights['host_lsoa']:.0f}), "
-                    f"Catchment ({hub_score_weights['catchment']:.0f})"
-                ),
-            },
-            {"Setting": "Catchment radius", "Value": f"{catchment_radius_m:,.0f} m"},
-            {
-                "Setting": "Suggestion constraints",
-                "Value": (
-                    "N/A"
-                    if candidate_mode == "manual"
-                    else f"{suggestion_min_spacing_m:,.0f} m spacing; "
-                    f"{'one per neighbourhood' if suggestion_one_per_neighbourhood else 'multiple per neighbourhood allowed'}"
-                ),
-            },
-        ]
-    )
-    st.dataframe(audit_frame, use_container_width=True, hide_index=True)
-
+    # — Validation and run —————————————————————————————————————————
     report_can_run = report.can_run_analysis if candidate_mode == "manual" else report.can_run_candidate_discovery
     can_run = (
         bool(selected_indices)
@@ -1191,41 +1786,33 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     if not report_can_run:
         st.error("Fix the blocking input issues shown on the Introduction page before running analysis.")
 
-    run_col, goto_col = st.columns([0.6, 0.4], gap="medium")
-    with run_col:
-        if st.button("Run analysis", type="primary", disabled=not can_run, use_container_width=True):
-            try:
-                spinner_text = (
-                    "Running need scoring and suggesting candidate locations..."
-                    if candidate_mode == "suggested"
-                    else "Running need and hub scoring..."
-                )
-                with st.spinner(spinner_text):
-                    result = run_analysis(
-                        config=config,
-                        geography_mode=geography_mode,
-                        icb_name=icb_name,
-                        index_weights=weights,
-                        hub_score_weights=hub_score_weights,
-                        catchment_radius_m=catchment_radius_m,
-                        candidate_postcodes=candidate_postcodes,
-                        selected_neighbourhoods=selected_neighbourhoods,
-                        candidate_mode=candidate_mode,
-                        suggestion_count=suggestion_count,
-                        suggestion_min_spacing_m=suggestion_min_spacing_m,
-                        suggestion_one_per_neighbourhood=suggestion_one_per_neighbourhood,
-                    )
-                st.session_state["analysis_result"] = result
-                st.success("Analysis complete.")
-            except Exception as exc:
-                st.session_state.pop("analysis_result", None)
-                st.error(str(exc))
-    with goto_col:
-        if st.session_state.get("analysis_result") is not None:
-            if st.button("View outputs", type="secondary", use_container_width=True):
-                st.session_state["active_page"] = "Outputs"
-                st.query_params["page"] = "Outputs"
-                st.rerun()
+    loading_ph = st.empty()
+
+    if st.button("Run analysis", type="primary", disabled=not can_run, use_container_width=True):
+        try:
+            loading_ph.html(_analysis_loading_html(candidate_mode))
+            result = run_analysis(
+                config=config,
+                geography_mode=geography_mode,
+                icb_name=icb_name,
+                index_weights=weights,
+                hub_score_weights=hub_score_weights,
+                catchment_radius_m=catchment_radius_m,
+                candidate_postcodes=candidate_postcodes,
+                selected_neighbourhoods=selected_neighbourhoods,
+                candidate_mode=candidate_mode,
+                suggestion_count=suggestion_count,
+                suggestion_min_spacing_m=suggestion_min_spacing_m,
+                suggestion_one_per_neighbourhood=suggestion_one_per_neighbourhood,
+            )
+            loading_ph.empty()
+            st.session_state["analysis_result"] = result
+            st.query_params["page"] = "Outputs"
+            st.rerun()
+        except Exception as exc:
+            loading_ph.empty()
+            st.session_state.pop("analysis_result", None)
+            st.error(str(exc))
 
 
 def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None = None) -> folium.Map:
@@ -1252,10 +1839,12 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
     folium.GeoJson(
         valid_need_scores.loc[:, ["LSOA_code", "need_score_pct", "geometry"]].to_json(),
         style_function=lambda feature: {
-            "fillColor": colormap(feature["properties"]["need_score_pct"]),
+            "fillColor": colormap(feature["properties"]["need_score_pct"])
+            if feature["properties"]["need_score_pct"] is not None
+            else "#cccccc",
             "color": "#666666",
             "weight": 0.3,
-            "fillOpacity": 0.7,
+            "fillOpacity": 0.7 if feature["properties"]["need_score_pct"] is not None else 0.0,
         },
         tooltip=folium.GeoJsonTooltip(
             fields=["LSOA_code", "need_score_pct"],
@@ -1277,7 +1866,7 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
                 style_function=lambda _: {
                     "fillColor": "none",
                     "color": "#490E6F",
-                    "weight": 2.0,
+                    "weight": 0.8,
                     "fillOpacity": 0,
                 },
                 tooltip=folium.GeoJsonTooltip(
@@ -1289,49 +1878,73 @@ def build_output_map(result: AnalysisResult, selected_overlays: list[str] | None
 
     for _, row in valid_candidates.iterrows():
         hub_score_pct = pd.to_numeric(pd.Series([row.get("hub_score_pct")]), errors="coerce").iloc[0]
-        hub_score_label = f"{hub_score_pct:.2f}" if pd.notna(hub_score_pct) else "N/A"
-        catchment_radius_m = pd.to_numeric(pd.Series([row.get("catchment_radius_m")]), errors="coerce").iloc[0]
-        is_suggested = bool(row.get("is_suggested", False))
+        hub_score_label = f"{hub_score_pct:.1f}" if pd.notna(hub_score_pct) else "N/A"
+        catchment_radius_val = pd.to_numeric(pd.Series([row.get("catchment_radius_m")]), errors="coerce").iloc[0]
         candidate_source = row.get("candidate_source", "Candidate postcode")
+        rank_val = int(row["rank"]) if pd.notna(row.get("rank")) else 999
         popup = folium.Popup(
             html=(
-                f"<strong>{row['postcode']}</strong><br>"
+                f"<strong>#{rank_val} — {row['postcode']}</strong><br>"
                 f"{candidate_source}<br>"
-                f"Rank: {row['rank']}<br>"
                 f"Hub Score: {hub_score_label}<br>"
                 f"Host LSOA: {row['LSOA_code']}"
             ),
             max_width=260,
         )
-        if pd.notna(catchment_radius_m) and catchment_radius_m > 0:
+        if pd.notna(catchment_radius_val) and catchment_radius_val > 0:
             folium.Circle(
                 location=[row.geometry.y, row.geometry.x],
-                radius=float(catchment_radius_m),
+                radius=float(catchment_radius_val),
                 color="#724CBF",
-                weight=2,
+                weight=1,
                 fill=True,
                 fill_color="#9576FF",
-                fill_opacity=0.08,
-                opacity=0.55,
+                fill_opacity=0.07,
+                opacity=0.35,
             ).add_to(fmap)
-        folium.CircleMarker(
+        if rank_val == 1:
+            bg, border, sz = "#D97706", "#B45309", 28
+        elif rank_val <= 3:
+            bg, border, sz = "#EA580C", "#C2410C", 26
+        elif rank_val <= 5:
+            bg, border, sz = "#7C3AED", "#6D28D9", 24
+        else:
+            bg, border, sz = "#490E6F", "#350355", 22
+        font_size = "11px" if rank_val == 1 else "10px"
+        folium.Marker(
             location=[row.geometry.y, row.geometry.x],
-            radius=7,
-            color="#7C4A03" if is_suggested else "#350355",
-            weight=1,
-            fill=True,
-            fill_color="#D9A24A" if is_suggested else "#9576FF",
-            fill_opacity=0.95,
+            icon=folium.DivIcon(
+                html=(
+                    f'<div style="width:{sz}px;height:{sz}px;background:{bg};border:2.5px solid {border};'
+                    f'border-radius:50%;display:flex;align-items:center;justify-content:center;'
+                    f'color:#fff;font-family:Inter,system-ui,sans-serif;font-weight:700;font-size:{font_size};'
+                    f'box-shadow:0 2px 8px rgba(0,0,0,0.35);line-height:1">{rank_val}</div>'
+                ),
+                icon_size=(sz, sz),
+                icon_anchor=(sz // 2, sz // 2),
+            ),
             popup=popup,
+            tooltip=f"#{rank_val} · {row['postcode']} · Score: {hub_score_label}",
         ).add_to(fmap)
 
     fmap = add_asset_overlays(fmap, result, selected_overlays or [])
-    folium.LayerControl(collapsed=False).add_to(fmap)
     return fmap
 
 
 def render_outputs_page() -> None:
-    st.title("Outputs")
+    st.markdown(
+        """
+        <div class="hero-shell">
+            <div class="hero-brand">Analysis Results</div>
+            <div class="hero-title">Outputs</div>
+            <div class="hero-subtitle">
+                Ranked hub locations plotted against population need. Toggle overlays below to layer existing services onto the map.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     result: AnalysisResult | None = st.session_state.get("analysis_result")
     if result is None:
         st.info("Run an analysis from the Configure Inputs page first.")
@@ -1346,100 +1959,51 @@ def render_outputs_page() -> None:
         return
     if result.metadata.get("valid_hub_score_count", 0) == 0:
         st.error(
-            "No valid Hub Scores were generated for this run. Check whether the candidate postcode host LSOAs are "
+            "No valid Hub Scores were generated. Check whether the candidate postcodes are "
             "inside the selected geography and neighbourhood footprint."
         )
-        diagnostics = pd.DataFrame(
-            [
-                {"Metric": "LSOAs analysed", "Value": result.metadata.get("lsoa_count", 0)},
-                {"Metric": "Valid Need Scores", "Value": result.metadata.get("valid_need_score_count", 0)},
-                {"Metric": "Candidate hubs", "Value": result.metadata.get("candidate_count", 0)},
-                {"Metric": "In-scope host LSOAs", "Value": result.metadata.get("in_scope_host_count", 0)},
-                {"Metric": "Valid Hub Scores", "Value": result.metadata.get("valid_hub_score_count", 0)},
-            ]
-        )
-        st.dataframe(diagnostics, use_container_width=True, hide_index=True)
         return
 
-    st.subheader("Map")
-    overlay_toggle_col, overlay_picker_col = st.columns([0.22, 0.78], gap="large")
-    with overlay_toggle_col:
-        show_existing_assets = st.toggle("Show existing services", value=False)
-    with overlay_picker_col:
-        selected_overlays = st.multiselect(
-            "Add existing services to the map",
-            options=list(ASSET_OVERLAY_STYLES),
-            default=list(ASSET_OVERLAY_STYLES) if show_existing_assets else [],
-            disabled=not show_existing_assets,
-            placeholder="Select GP practices, community pharmacies, family hubs, and parks and gardens",
-        )
-    st_folium(build_output_map(result, selected_overlays), use_container_width=True, height=700)
-
     candidate_mode = str(result.metadata.get("candidate_mode", "manual"))
-    st.subheader("Suggested Candidate Locations" if candidate_mode == "suggested" else "Ranked Candidate Hubs")
+
+    _OVERLAY_OPTIONS = {
+        "🏥  GP Practices": "GP practices",
+        "💊  Pharmacies": "Community pharmacies",
+        "👪  Family Hubs": "Family hubs",
+        "🌿  Parks": "Parks and gardens",
+        "🔺  Acute Hospitals": "Acute hospitals",
+    }
+    selected_overlay_labels = st.segmented_control(
+        "Estates",
+        options=list(_OVERLAY_OPTIONS.keys()),
+        selection_mode="multi",
+        default=[],
+    )
+    selected_overlays = [_OVERLAY_OPTIONS[label] for label in (selected_overlay_labels or [])]
+
+    st_folium(build_output_map(result, selected_overlays), use_container_width=True, height=640, returned_objects=[])
+
+    st.subheader("Suggested Locations" if candidate_mode == "suggested" else "Ranked Hubs")
     if candidate_mode == "suggested":
-        st.caption(str(result.metadata.get("candidate_location_note", "")))
+        note = str(result.metadata.get("candidate_location_note", ""))
+        if note:
+            st.caption(note)
+
     table = result.candidate_scores.drop(columns="geometry").copy()
-    ordered_columns = [
-        "postcode",
-        "rank",
-        "hub_score_pct",
-        "LSOA_code",
-        "LSOA_name",
-        "borough",
-        "nghbrhd",
-        "host_need_score_pct",
-        "weighted_catchment_need_score_pct",
-        "lsoas_in_catchment",
-        "catchment_radius_m",
-        "postcode_count_in_lsoa",
-        "candidate_source",
-        "coordinate_source",
-        "geocode_source",
-        "postcode_note",
-    ]
-    available_columns = [column for column in ordered_columns if column in table.columns]
-    st.dataframe(table.loc[:, available_columns], use_container_width=True, hide_index=True)
-
-    st.subheader("Method")
-    weights_summary = ", ".join(
-        f"{INDEX_DEFINITIONS[index_name]['label']} ({weight:.0f})"
-        for index_name, weight in result.metadata["index_weights"].items()
+    display_columns = ["rank", "postcode", "hub_score_pct", "borough", "nghbrhd"]
+    available_columns = [c for c in display_columns if c in table.columns]
+    st.dataframe(
+        table.loc[:, available_columns].sort_values("rank") if "rank" in table.columns else table.loc[:, available_columns],
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "rank": st.column_config.NumberColumn("Rank", width="small"),
+            "postcode": st.column_config.TextColumn("Postcode"),
+            "hub_score_pct": st.column_config.NumberColumn("Hub Score", format="%.1f"),
+            "borough": st.column_config.TextColumn("Borough"),
+            "nghbrhd": st.column_config.TextColumn("Neighbourhood"),
+        },
     )
-    hub_weights = result.metadata.get("hub_score_weights", DEFAULT_HUB_SCORE_WEIGHTS)
-    catchment_radius_m = float(result.metadata.get("catchment_radius_m", DEFAULT_CATCHMENT_RADIUS_M))
-    hub_weights_summary = (
-        f"Host LSOA ({hub_weights['host_lsoa']:.0f}), "
-        f"Catchment ({hub_weights['catchment']:.0f})"
-    )
-    neighbourhood_summary = result.metadata.get("selected_neighbourhoods", [])
-    st.write(f"Selected indices and weights: {weights_summary}")
-    st.write(f"Hub scoring weights: {hub_weights_summary}")
-    st.write(f"Catchment radius: {catchment_radius_m:,.0f} m")
-    if neighbourhood_summary:
-        st.write(f"Neighbourhood focus: {', '.join(neighbourhood_summary)}")
-    else:
-        st.write("Neighbourhood focus: full selected geography.")
-    if candidate_mode == "suggested":
-        st.write(
-            "Candidate discovery scored host LSOA centroids, applied spacing/diversity constraints, and labelled each "
-            "selected search location with a representative postcode from the host LSOA."
-        )
-    st.write(
-        "Need Score uses min-max scaled indices within the selected geography. Hub Score combines the host LSOA "
-        "Need Score with a linearly distance-weighted catchment mean inside the selected radius."
-    )
-
-    st.subheader("Audit")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("LSOAs analysed", f"{result.metadata['lsoa_count']:,}")
-    candidate_metric_label = "Suggested locations" if candidate_mode == "suggested" else "Candidate hubs ranked"
-    col2.metric(candidate_metric_label, f"{result.metadata['candidate_count']:,}")
-    col3.metric("Generated", str(result.metadata["generated_at"]))
-    col4.metric("Data version", str(result.metadata["data_version"]))
-    diag1, diag2 = st.columns(2)
-    diag1.metric("Valid Need Scores", f"{result.metadata.get('valid_need_score_count', 0):,}")
-    diag2.metric("Valid Hub Scores", f"{result.metadata.get('valid_hub_score_count', 0):,}")
 
 
 def render_methodology_page() -> None:
@@ -1463,26 +2027,26 @@ def render_methodology_page() -> None:
 
 def main() -> None:
     inject_styles()
-    render_app_header()
-    config = build_config()
-    report = build_validation_report(config)
-    inventory = build_inventory_summary(config)
+    require_authentication()
+
+    if st.query_params.get("signout") == "1":
+        st.session_state.pop("authenticated_username", None)
+        st.session_state.pop("auth_error", None)
+        st.query_params.clear()
+        st.rerun()
 
     query_page = st.query_params.get("page", PAGES[0])
     if isinstance(query_page, list):
         query_page = query_page[0]
     if query_page not in PAGES:
         query_page = PAGES[0]
-    if "active_page" not in st.session_state or st.session_state["active_page"] not in PAGES:
-        st.session_state["active_page"] = query_page
+    page = query_page
 
-    page = st.sidebar.radio("Pages", options=PAGES, key="active_page")
-    st.sidebar.markdown(
-        '<div class="sidebar-credentials">B Corp · Social Enterprise UK<br>FT Leading Consultancy 2025</div>',
-        unsafe_allow_html=True,
-    )
-    if page != query_page:
-        st.query_params["page"] = page
+    render_topnav(page)
+    config = build_config()
+    report = build_validation_report(config)
+    inventory = build_inventory_summary(config)
+
     if page == "Introduction":
         render_intro_page(report, inventory, page)
     elif page == "Configure Inputs":

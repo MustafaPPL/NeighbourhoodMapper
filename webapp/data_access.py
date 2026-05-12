@@ -8,7 +8,7 @@ import geopandas as gpd
 import pandas as pd
 import requests
 
-from build_weighted_priority_map import (
+from scripts.analysis.build_weighted_priority_map import (
     fetch_london_lsoa_boundaries,
     load_65plus_data,
     load_community_pharmacies,
