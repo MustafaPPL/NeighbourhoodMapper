@@ -1927,48 +1927,46 @@ def render_configure_page(config: AppConfig, report: ValidationReport) -> None:
     hub_score_weights, _ = hub_score_weight_controls()
 
     # — Travel access mode ————————————————————————————————————————
-    st.subheader("Travel Access Mode")
-    st.caption(
-        "Choose how catchment areas are defined. "
-        "Walking and transit modes use pre-computed travel-time matrices and replace the straight-line radius."
-    )
     _walking_available = config.walking_matrix_path is not None
     _transit_available = config.transit_matrix_path is not None
     _travel_mode_options = ["straight_line", "walking", "transit"]
-    _travel_mode_labels = {
-        "straight_line": "Straight-line radius (default)",
-        "walking": "Walking travel time (OSRM)",
-        "transit": "Public transport travel time (R5 / TfL GTFS)",
-    }
-    travel_mode_key = prepare_persisted_widget(
-        "travel_mode",
-        "straight_line",
-        normalize=lambda value: value if value in _travel_mode_options else "straight_line",
-    )
-    _saved_travel_mode = st.session_state.get(travel_mode_key, "straight_line")
-    if _saved_travel_mode == "walking" and not _walking_available:
-        st.session_state[travel_mode_key] = "straight_line"
-    if _saved_travel_mode == "transit" and not _transit_available:
-        st.session_state[travel_mode_key] = "straight_line"
-    travel_mode = st.radio(
-        "Travel access mode",
-        options=_travel_mode_options,
-        format_func=lambda v: _travel_mode_labels[v],
-        key=travel_mode_key,
-        label_visibility="collapsed",
-        help=(
-            "Walking and transit options require pre-computed travel-time matrices. "
-            "Run the batch scripts and set the matrix paths in Settings to enable them."
-        ),
-    )
-    remember_persisted_widget("travel_mode")
-    if not _walking_available and travel_mode == "walking":
+
+    if _walking_available or _transit_available:
+        st.subheader("Travel Access Mode")
+        st.caption(
+            "Choose how catchment areas are defined. "
+            "Walking and transit modes use pre-computed travel-time matrices and replace the straight-line radius."
+        )
+        _travel_mode_labels = {
+            "straight_line": "Straight-line radius (default)",
+            "walking": "Walking travel time (OSRM)",
+            "transit": "Public transport travel time (R5 / TfL GTFS)",
+        }
+        travel_mode_key = prepare_persisted_widget(
+            "travel_mode",
+            "straight_line",
+            normalize=lambda value: value if value in _travel_mode_options else "straight_line",
+        )
+        _saved_travel_mode = st.session_state.get(travel_mode_key, "straight_line")
+        if _saved_travel_mode == "walking" and not _walking_available:
+            st.session_state[travel_mode_key] = "straight_line"
+        if _saved_travel_mode == "transit" and not _transit_available:
+            st.session_state[travel_mode_key] = "straight_line"
+        travel_mode = st.radio(
+            "Travel access mode",
+            options=_travel_mode_options,
+            format_func=lambda v: _travel_mode_labels[v],
+            key=travel_mode_key,
+            label_visibility="collapsed",
+        )
+        remember_persisted_widget("travel_mode")
+        if not _walking_available and travel_mode == "walking":
+            travel_mode = "straight_line"
+        elif not _transit_available and travel_mode == "transit":
+            travel_mode = "straight_line"
+        config = dataclasses.replace(config, travel_mode=travel_mode)
+    else:
         travel_mode = "straight_line"
-        st.caption(":grey[Walking matrix not configured — configure the path in Settings to enable.]")
-    elif not _transit_available and travel_mode == "transit":
-        travel_mode = "straight_line"
-        st.caption(":grey[Transit matrix not configured — configure the path in Settings to enable.]")
-    config = dataclasses.replace(config, travel_mode=travel_mode)
 
     # — Catchment radius (straight-line only) —————————————————————
     catchment_radius_m = float(DEFAULT_CATCHMENT_RADIUS_M)
