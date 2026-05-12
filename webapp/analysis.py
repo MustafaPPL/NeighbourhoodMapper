@@ -34,6 +34,36 @@ INDEX_DEFINITIONS = {
         "source_column": "population_65_plus",
         "description": "Residents aged 65 years and over.",
     },
+    "pct_asian_residents": {
+        "label": "Asian / Asian British residents (Census 2021)",
+        "source_column": "pct_asian_residents",
+        "description": "Proportion of residents who identified as Asian, Asian British, or Asian Welsh in Census 2021 (TS021). Use to surface areas with higher Asian population proportions for equity-targeted planning.",
+        "available_when": "ethnicity",
+    },
+    "pct_black_residents": {
+        "label": "Black / Black British residents (Census 2021)",
+        "source_column": "pct_black_residents",
+        "description": "Proportion of residents who identified as Black, Black British, Black Welsh, Caribbean, or African in Census 2021 (TS021).",
+        "available_when": "ethnicity",
+    },
+    "pct_mixed_residents": {
+        "label": "Mixed / Multiple ethnic groups (Census 2021)",
+        "source_column": "pct_mixed_residents",
+        "description": "Proportion of residents who identified as Mixed or Multiple ethnic groups in Census 2021 (TS021).",
+        "available_when": "ethnicity",
+    },
+    "pct_other_ethnic_group_residents": {
+        "label": "Other ethnic group (Census 2021)",
+        "source_column": "pct_other_ethnic_group_residents",
+        "description": "Proportion of residents who identified as Other ethnic group in Census 2021 (TS021).",
+        "available_when": "ethnicity",
+    },
+    "pct_white_other_residents": {
+        "label": "White Other residents (Census 2021)",
+        "source_column": "pct_white_other_residents",
+        "description": "Proportion of residents identifying as White Other (non-British/Irish/Gypsy) in Census 2021 (TS021). Captures recent EU migration and other White minority communities.",
+        "available_when": "ethnicity",
+    },
     "qof_chd_prevalence": {
         "label": "Cardiovascular disease prevalence (QOF 2024-25)",
         "source_column": "qof_chd_prevalence",
