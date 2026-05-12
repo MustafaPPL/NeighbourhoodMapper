@@ -287,6 +287,47 @@ def validate_config(config: AppConfig) -> ValidationReport:
                 )
             )
 
+    _ERIC_REQUIRED_COLUMNS = {"site_name", "latitude", "longitude"}
+    if config.eric_geocoded_csv is not None:
+        if not config.eric_geocoded_csv.exists():
+            blocking_issues.append(
+                ValidationIssue(
+                    severity="error",
+                    message="ERIC geocoded sites file is configured but does not exist.",
+                    remediation=(
+                        f"Run scripts/analysis/build_eric_geocoded.py to generate it, "
+                        f"or clear the path in Optional Data Sources. Expected: {config.eric_geocoded_csv}"
+                    ),
+                )
+            )
+        else:
+            try:
+                eric_cols = set(pd.read_csv(config.eric_geocoded_csv, nrows=0).columns.str.strip())
+                missing_cols = _ERIC_REQUIRED_COLUMNS - eric_cols
+                if missing_cols:
+                    blocking_issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            message=f"ERIC geocoded CSV is missing required columns: {sorted(missing_cols)}",
+                            remediation=(
+                                "Regenerate the file with scripts/analysis/build_eric_geocoded.py "
+                                "or check the file path is correct."
+                            ),
+                        )
+                    )
+                else:
+                    local_sources.append(
+                        _source_status("ERIC estate sites", config.eric_geocoded_csv, "Estate proximity flags")
+                    )
+            except Exception as exc:
+                blocking_issues.append(
+                    ValidationIssue(
+                        severity="error",
+                        message=f"Could not read ERIC geocoded CSV: {exc}",
+                        remediation="Check the file is a valid CSV and is not locked by another process.",
+                    )
+                )
+
     if config.local_lsoa_path is not None:
         local_sources.append(_source_status("Local LSOA boundaries", config.local_lsoa_path, "Spatial joins"))
     if config.postcode_coordinate_lookup_csv is not None:

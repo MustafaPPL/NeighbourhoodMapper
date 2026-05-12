@@ -78,6 +78,55 @@ def load_travel_time_matrix(path: Path | None) -> dict[tuple[str, str], float] |
     }
 
 
+def load_estate_sites(path: Path) -> gpd.GeoDataFrame:
+    """Return NHS estate sites as a GeoDataFrame (WGS84) with site_name and geometry."""
+    df = pd.read_csv(path, dtype=str)
+    df.columns = df.columns.str.strip()
+    df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
+    df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
+    df = df.dropna(subset=["latitude", "longitude"])
+    return gpd.GeoDataFrame(
+        df,
+        geometry=gpd.points_from_xy(df["longitude"], df["latitude"]),
+        crs="EPSG:4326",
+    )
+
+
+def compute_estate_proximity(
+    candidate_lat: float,
+    candidate_lon: float,
+    estate_sites: gpd.GeoDataFrame | None,
+    radius_m: int,
+) -> dict[str, object]:
+    """Return estate proximity flags for a single candidate location."""
+    null_result: dict[str, object] = {
+        "nearby_nhs_estate_flag": False,
+        "nearby_estate_count": 0,
+        "nearest_estate_name": None,
+        "nearest_estate_distance_m": None,
+    }
+    if estate_sites is None or estate_sites.empty:
+        return null_result
+
+    from shapely.geometry import Point
+
+    candidate_bng = gpd.GeoSeries(
+        [Point(candidate_lon, candidate_lat)], crs="EPSG:4326"
+    ).to_crs("EPSG:27700").iloc[0]
+    sites_bng = estate_sites.to_crs("EPSG:27700").copy()
+    sites_bng["distance_m"] = sites_bng.geometry.distance(candidate_bng)
+    nearby = sites_bng[sites_bng["distance_m"] <= radius_m].copy()
+    if nearby.empty:
+        return null_result
+    nearest = nearby.loc[nearby["distance_m"].idxmin()]
+    return {
+        "nearby_nhs_estate_flag": True,
+        "nearby_estate_count": int(len(nearby)),
+        "nearest_estate_name": str(nearest.get("site_name", "")),
+        "nearest_estate_distance_m": float(nearest["distance_m"]),
+    }
+
+
 def load_ethnicity_data(path: Path) -> pd.DataFrame:
     """Return ethnicity LSOA proportions dataframe with LSOA_code and five proportion columns."""
     df = pd.read_csv(path, dtype={"LSOA_code": str})

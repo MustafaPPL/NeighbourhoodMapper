@@ -43,6 +43,8 @@ class AppConfig:
     travel_mode: str = "straight_line"
     walking_matrix_path: Path | None = None
     transit_matrix_path: Path | None = None
+    eric_geocoded_csv: Path | None = None
+    estate_search_radius_m: int = 1000
 
 
 ICB_CHOICES = list(ICB_BOROUGHS_BY_LAD)
