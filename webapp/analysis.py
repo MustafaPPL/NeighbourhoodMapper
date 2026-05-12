@@ -15,6 +15,7 @@ from webapp.data_access import (
     load_need_inputs,
     load_neighbourhoods,
     load_postcode_lsoa_lookup,
+    load_travel_time_matrix,
 )
 
 
@@ -155,18 +156,33 @@ def _score_single_candidate(
     centroids: gpd.GeoDataFrame,
     hub_score_weights: dict[str, float],
     catchment_radius_m: float,
+    travel_time_matrix: dict[tuple[str, str], float] | None = None,
 ) -> dict[str, object]:
-    distances = centroids.geometry.distance(candidate_row.geometry)
     host_lsoa = candidate_row["LSOA_code"]
 
     host_need = centroids.loc[centroids["LSOA_code"].eq(host_lsoa), "need_score"]
     host_need_value = float(host_need.iloc[0]) if not host_need.empty and pd.notna(host_need.iloc[0]) else pd.NA
 
-    in_catchment = centroids[(distances <= catchment_radius_m) & (~centroids["LSOA_code"].eq(host_lsoa))].copy()
-    if not in_catchment.empty:
-        in_catchment["distance_m"] = distances.loc[in_catchment.index]
-        in_catchment["distance_weight"] = 1 - (in_catchment["distance_m"] / catchment_radius_m)
-        in_catchment = in_catchment[in_catchment["distance_weight"] > 0].copy()
+    if travel_time_matrix is not None:
+        other_lsoas = centroids[~centroids["LSOA_code"].eq(host_lsoa)].copy()
+        if not other_lsoas.empty:
+            other_lsoas["travel_time_minutes"] = other_lsoas["LSOA_code"].map(
+                lambda dst: travel_time_matrix.get((host_lsoa, dst), float("nan"))
+            )
+            other_lsoas["time_weight"] = (
+                1.0 - other_lsoas["travel_time_minutes"] / 30.0
+            ).clip(lower=0.0)
+            in_catchment = other_lsoas[other_lsoas["time_weight"] > 0].copy()
+            in_catchment = in_catchment.rename(columns={"time_weight": "distance_weight"})
+        else:
+            in_catchment = other_lsoas.copy()
+    else:
+        distances = centroids.geometry.distance(candidate_row.geometry)
+        in_catchment = centroids[(distances <= catchment_radius_m) & (~centroids["LSOA_code"].eq(host_lsoa))].copy()
+        if not in_catchment.empty:
+            in_catchment["distance_m"] = distances.loc[in_catchment.index]
+            in_catchment["distance_weight"] = 1 - (in_catchment["distance_m"] / catchment_radius_m)
+            in_catchment = in_catchment[in_catchment["distance_weight"] > 0].copy()
 
     catchment_mean = 0.0
     if not in_catchment.empty:
@@ -246,6 +262,7 @@ def suggest_candidate_hubs(
     suggestion_count: int = DEFAULT_SUGGESTION_COUNT,
     min_spacing_m: float = DEFAULT_SUGGESTION_MIN_SPACING_M,
     one_per_neighbourhood: bool = True,
+    travel_time_matrix: dict[tuple[str, str], float] | None = None,
 ) -> gpd.GeoDataFrame:
     need_columns = [
         column
@@ -269,7 +286,7 @@ def suggest_candidate_hubs(
     rows: list[dict[str, object]] = []
     for _, candidate in candidates.iterrows():
         row = candidate.drop(labels=["geometry"]).to_dict()
-        row.update(_score_single_candidate(candidate, scoring_centroids, hub_score_weights, catchment_radius_m))
+        row.update(_score_single_candidate(candidate, scoring_centroids, hub_score_weights, catchment_radius_m, travel_time_matrix))
         row["candidate_source"] = "Suggested search location"
         row["coordinate_source"] = "Host LSOA centroid"
         row["geocode_source"] = "LSOA centroid"
@@ -307,6 +324,7 @@ def rank_candidate_hubs(
     config: AppConfig,
     hub_score_weights: dict[str, float],
     catchment_radius_m: float,
+    travel_time_matrix: dict[tuple[str, str], float] | None = None,
 ) -> tuple[gpd.GeoDataFrame, list[str], list[str]]:
     geocoded = geocode_candidate_postcodes(candidate_postcodes, config)
     assigned, unresolved = assign_candidates_to_lsoa(geocoded.candidates, need_scores, config)
@@ -321,7 +339,7 @@ def rank_candidate_hubs(
     rows: list[dict[str, object]] = []
     for _, candidate in assigned_bng.iterrows():
         row = candidate.drop(labels=["geometry"]).to_dict()
-        row.update(_score_single_candidate(candidate, centroids, hub_score_weights, catchment_radius_m))
+        row.update(_score_single_candidate(candidate, centroids, hub_score_weights, catchment_radius_m, travel_time_matrix))
         rows.append(row)
 
     scored = pd.DataFrame(rows)
@@ -356,6 +374,13 @@ def run_analysis(
     suggestion_min_spacing_m: float = DEFAULT_SUGGESTION_MIN_SPACING_M,
     suggestion_one_per_neighbourhood: bool = True,
 ) -> AnalysisResult:
+    matrix_path = (
+        config.walking_matrix_path if config.travel_mode == "walking"
+        else config.transit_matrix_path if config.travel_mode == "transit"
+        else None
+    )
+    travel_time_matrix = load_travel_time_matrix(matrix_path)
+
     need_scores = build_need_scores(config, geography_mode, icb_name, index_weights, selected_neighbourhoods)
     if need_scores.empty:
         raise ValueError(
@@ -376,6 +401,7 @@ def run_analysis(
             suggestion_count=suggestion_count,
             min_spacing_m=suggestion_min_spacing_m,
             one_per_neighbourhood=suggestion_one_per_neighbourhood,
+            travel_time_matrix=travel_time_matrix,
         )
         invalid_postcodes: list[str] = []
         unresolved_postcodes: list[str] = []
@@ -389,6 +415,7 @@ def run_analysis(
             config,
             hub_score_weights,
             catchment_radius_m,
+            travel_time_matrix=travel_time_matrix,
         )
     if candidate_scores.empty:
         raise ValueError(
