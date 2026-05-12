@@ -994,6 +994,20 @@ def selected_indices_controls(config: AppConfig) -> tuple[list[str], dict[str, f
         "Enable by supplying a QOF LSOA prevalence CSV in Optional Data Sources. "
         "Generate it with scripts/analysis/build_qof_lsoa.py."
     )
+    _ETHNICITY_UNAVAILABLE_TOOLTIP = (
+        "Enable by supplying an ethnicity LSOA proportions CSV in Optional Data Sources. "
+        "Generate it with scripts/analysis/build_ethnicity_lsoa.py."
+    )
+
+    _ethnicity_entries = [name for name, defn in INDEX_DEFINITIONS.items() if defn.get("available_when") == "ethnicity"]
+    _ethnicity_available = config.ethnicity_lsoa_csv is not None
+    if _ethnicity_entries and _ethnicity_available:
+        st.info(
+            "**Ethnicity indices (Census 2021)** are an equity lens — they show where specific communities "
+            "are concentrated, not where deprivation is highest. Select only those relevant to your "
+            "planning question and weight them alongside deprivation and population indicators.",
+            icon="ℹ️",
+        )
 
     selected_indices: list[str] = []
     weights: dict[str, float] = {}
@@ -1001,6 +1015,7 @@ def selected_indices_controls(config: AppConfig) -> tuple[list[str], dict[str, f
     for i, (index_name, defn) in enumerate(INDEX_DEFINITIONS.items()):
         available_when = defn.get("available_when")
         qof_unavailable = available_when == "qof" and config.qof_lsoa_csv is None
+        ethnicity_unavailable = available_when == "ethnicity" and not _ethnicity_available
 
         if i > 0:
             st.markdown(
@@ -1008,18 +1023,28 @@ def selected_indices_controls(config: AppConfig) -> tuple[list[str], dict[str, f
                 unsafe_allow_html=True,
             )
         label_col, weight_col = st.columns([6, 4])
+        unavailable = qof_unavailable or ethnicity_unavailable
+        if unavailable:
+            unavailable_tooltip = _QOF_UNAVAILABLE_TOOLTIP if qof_unavailable else _ETHNICITY_UNAVAILABLE_TOOLTIP
+            unavailable_note = (
+                "_Requires QOF LSOA CSV — configure in Optional Data Sources._"
+                if qof_unavailable
+                else "_Requires ethnicity LSOA CSV — configure in Optional Data Sources._"
+            )
+        enabled = False
+
         with label_col:
-            if qof_unavailable:
+            if unavailable:
                 st.checkbox(
                     defn["label"],
                     value=False,
                     disabled=True,
-                    help=_QOF_UNAVAILABLE_TOOLTIP,
+                    help=unavailable_tooltip,
                     key=f"idx_disabled_{index_name}",
                 )
                 st.caption(
                     _INDEX_GUIDANCE.get(index_name, defn.get("description", ""))
-                    + "  \n_Requires QOF LSOA CSV — configure in Optional Data Sources._"
+                    + f"  \n{unavailable_note}"
                 )
             else:
                 enabled_key = prepare_persisted_widget(
@@ -1034,7 +1059,7 @@ def selected_indices_controls(config: AppConfig) -> tuple[list[str], dict[str, f
                 remember_persisted_widget(f"idx_enabled_{index_name}")
                 st.caption(_INDEX_GUIDANCE.get(index_name, defn.get("description", "")))
         with weight_col:
-            if qof_unavailable:
+            if unavailable:
                 st.markdown(
                     '<div style="color:#9E9099;font-size:0.75rem;margin-top:0.4rem">Not available — data not configured</div>',
                     unsafe_allow_html=True,
