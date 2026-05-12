@@ -43,6 +43,27 @@ def detect_column(columns: Iterable[str], candidates: list[str]) -> str | None:
     return None
 
 
+_QOF_COLUMNS = [
+    "LSOA_code",
+    "qof_chd_prevalence",
+    "qof_copd_prevalence",
+    "qof_diabetes_prevalence",
+    "qof_depression_prevalence",
+]
+
+
+def load_qof_data(path: Path) -> pd.DataFrame:
+    """Return QOF LSOA prevalence dataframe with LSOA_code and four disease columns."""
+    df = pd.read_csv(path, dtype={"LSOA_code": str})
+    df.columns = df.columns.str.strip()
+    missing = [col for col in _QOF_COLUMNS if col not in df.columns]
+    if missing:
+        raise ValueError(f"QOF CSV is missing required columns: {missing}. Found: {list(df.columns)}")
+    for col in _QOF_COLUMNS[1:]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df.loc[:, _QOF_COLUMNS].dropna(subset=["LSOA_code"]).drop_duplicates("LSOA_code")
+
+
 def load_need_inputs(config: AppConfig) -> pd.DataFrame:
     deprivation = load_deprivation_data(config.deprivation_csv)
     population = load_population_data(config.population_csv)
@@ -56,6 +77,11 @@ def load_need_inputs(config: AppConfig) -> pd.DataFrame:
     merged.loc[~merged["older_people_proportion"].between(0, 1), "older_people_proportion"] = pd.NA
     merged["deprivation_inverse"] = 11 - pd.to_numeric(merged["IMD_decile"], errors="coerce")
     merged.loc[~merged["IMD_decile"].between(1, 10), "deprivation_inverse"] = pd.NA
+
+    if config.qof_lsoa_csv is not None:
+        qof = load_qof_data(config.qof_lsoa_csv)
+        merged = merged.merge(qof, on="LSOA_code", how="left", validate="1:1")
+
     return merged
 
 
