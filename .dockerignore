@@ -9,6 +9,7 @@ __pycache__/
 Additional Context/
 archive/
 output/
+data/
 PPL Design System/
 *.pyc
 *.pyo
