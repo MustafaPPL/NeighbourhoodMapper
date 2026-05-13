@@ -10,6 +10,7 @@ Additional Context/
 archive/
 output/
 data/
+!data/cache/
 PPL Design System/
 *.pyc
 *.pyo

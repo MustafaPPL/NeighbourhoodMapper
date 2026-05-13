@@ -1,4 +1,4 @@
-FROM ppllondonintacrixygq5.azurecr.io/ppl-london-int-w4tzq2:v11
+FROM ppllondonintacrixygq5.azurecr.io/ppl-london-int-w4tzq2:v14
 
 WORKDIR /app
 
@@ -6,7 +6,9 @@ COPY .streamlit ./.streamlit
 COPY app.py ./
 COPY project_paths.py ./
 COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY docs ./docs
 COPY scripts ./scripts
-COPY data ./data
 COPY webapp ./webapp
+COPY data/cache ./data/cache
